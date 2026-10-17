@@ -1,76 +1,76 @@
-import { useState } from 'react';
-import Dashboard from './pages/Dashboard';
-import AddTransaction from './pages/AddTransaction';
+import React, { useState } from "react";
+import "./App.css";
+import { useTransactions } from "./hooks/useTransactions";
+import Dashboard from "./pages/Dashboard";
+import AddTransaction from "./pages/AddTransaction";
 
 export default function App() {
-  const [page, setPage] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const { transactions, addTransaction, deleteTransaction, availableYears } =
+    useTransactions();
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="mx-auto flex max-w-7xl">
-        <aside className="hidden min-h-screen w-64 border-r bg-white p-6 md:block">
-          <h1 className="mb-8 text-2xl font-black">
-            Money App
-          </h1>
+    <div className="app-layout">
+      {/* Sidebar cho Desktop & Header cho Mobile */}
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-logo">🌿</div>
+          <div>
+            <h1>SageFinance</h1>
+            <p>Quản lý chi tiêu thông minh</p>
+          </div>
+        </div>
 
-          <nav className="space-y-2">
-            <button
-              onClick={() => setPage('dashboard')}
-              className="w-full rounded-xl px-4 py-3 text-left hover:bg-gray-100"
-            >
-              Tổng quan
-            </button>
+        <nav className="nav-menu">
+          <button
+            className={`nav-item ${activeTab === "dashboard" ? "active" : ""}`}
+            onClick={() => setActiveTab("dashboard")}
+          >
+            <span>📊</span> Tổng quan & Thống kê
+          </button>
+          <button
+            className={`nav-item ${activeTab === "add" ? "active" : ""}`}
+            onClick={() => setActiveTab("add")}
+          >
+            <span>➕</span> Nhập chi tiêu hàng ngày
+          </button>
+        </nav>
+      </aside>
 
-            <button
-              onClick={() => setPage('add')}
-              className="w-full rounded-xl px-4 py-3 text-left hover:bg-gray-100"
-            >
-              Nhập giao dịch
-            </button>
+      {/* Nội dung chính */}
+      <main className="main-content">
+        {activeTab === "dashboard" ? (
+          <Dashboard
+            transactions={transactions}
+            onDelete={deleteTransaction}
+            availableYears={availableYears}
+            onQuickAdd={() => setActiveTab("add")}
+          />
+        ) : (
+          <AddTransaction
+            onAdd={addTransaction}
+            onSuccess={() => setActiveTab("dashboard")}
+          />
+        )}
+      </main>
 
-            <button
-              onClick={() => setPage('history')}
-              className="w-full rounded-xl px-4 py-3 text-left hover:bg-gray-100"
-            >
-              Lịch sử
-            </button>
-
-            <button
-              onClick={() => setPage('year')}
-              className="w-full rounded-xl px-4 py-3 text-left hover:bg-gray-100"
-            >
-              Tổng kết năm
-            </button>
-          </nav>
-        </aside>
-
-        <main className="flex-1 p-4 md:p-8">
-          {page === 'dashboard' && <Dashboard />}
-          {page === 'add' && <AddTransaction />}
-
-          {page === 'history' && (
-            <div>
-              <h1 className="text-3xl font-bold">
-                Lịch sử giao dịch
-              </h1>
-              <p className="mt-2 text-gray-500">
-                Làm sau cũng được, MVP trước cứ nhập và xem tổng quan đã.
-              </p>
-            </div>
-          )}
-
-          {page === 'year' && (
-            <div>
-              <h1 className="text-3xl font-bold">
-                Tổng kết năm
-              </h1>
-              <p className="mt-2 text-gray-500">
-                Trang này sẽ tổng hợp 12 tháng giống file Excel.
-              </p>
-            </div>
-          )}
-        </main>
-      </div>
+      {/* Thanh điều hướng dưới đáy cho Điện thoại (Mobile Bottom Nav) */}
+      <nav className="mobile-bottom-nav">
+        <button
+          className={`mobile-nav-btn ${activeTab === "dashboard" ? "active" : ""}`}
+          onClick={() => setActiveTab("dashboard")}
+        >
+          <span>📊</span>
+          <small>Tổng quan</small>
+        </button>
+        <button
+          className={`mobile-nav-btn fab-btn ${activeTab === "add" ? "active" : ""}`}
+          onClick={() => setActiveTab("add")}
+        >
+          <span>➕</span>
+          <small>Nhập thu/chi</small>
+        </button>
+      </nav>
     </div>
   );
 }

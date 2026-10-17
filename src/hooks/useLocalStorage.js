@@ -1,23 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from "react";
 
 export function useLocalStorage(key, initialValue) {
-  const [value, setValue] = useState(() => {
+  const [storedValue, setStoredValue] = useState(() => {
     try {
-      const storedValue = localStorage.getItem(key);
-      return storedValue ? JSON.parse(storedValue) : initialValue;
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.error('LocalStorage read error:', error);
+      console.error(`Lỗi đọc localStorage key "${key}":`, error);
       return initialValue;
     }
   });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.error('LocalStorage write error:', error);
-    }
-  }, [key, value]);
+  const setValue = useCallback(
+    (value) => {
+      try {
+        setStoredValue((prevValue) => {
+          const valueToStore =
+            value instanceof Function ? value(prevValue) : value;
+          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          return valueToStore;
+        });
+      } catch (error) {
+        console.error(`Lỗi ghi localStorage key "${key}":`, error);
+      }
+    },
+    [key],
+  );
 
-  return [value, setValue];
+  // Đồng bộ nếu mở nhiều tab
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === key && e.newValue) {
+        setStoredValue(JSON.parse(e.newValue));
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [key]);
+
+  return [storedValue, setValue];
 }

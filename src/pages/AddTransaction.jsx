@@ -1,178 +1,159 @@
-import { useState } from 'react';
-import { useTransactions } from '../hooks/useTransactions';
-import { defaultSettings } from '../data/defaultSettings';
+import React, { useState } from "react";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../data/defaultSettings";
+import { formatMoney, parseMoneyInput } from "../utils/money";
 
-export default function AddTransaction() {
-  const { addTransaction } = useTransactions();
+export default function AddTransaction({ onAdd, onSuccess }) {
+  const today = new Date().toISOString().split("T")[0];
 
-  const today = new Date().toISOString().slice(0, 10);
-
-  const [form, setForm] = useState({
-    type: 'expense',
-    date: today,
-    amount: '',
-    category: 'Mua sắm',
-    note: '',
-    paymentMethod: '',
-  });
+  const [type, setType] = useState("expense");
+  const [amountStr, setAmountStr] = useState("");
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0].id);
+  const [date, setDate] = useState(today);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
 
   const categories =
-    form.type === 'expense'
-      ? defaultSettings.expenseCategories
-      : defaultSettings.incomeSources;
+    type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
-  function updateField(field, value) {
-    setForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  }
+  const handleTypeChange = (newType) => {
+    setType(newType);
+    setCategory(
+      newType === "expense"
+        ? EXPENSE_CATEGORIES[0].id
+        : INCOME_CATEGORIES[0].id,
+    );
+  };
 
-  function handleSubmit(e) {
+  const handleAmountChange = (e) => {
+    const numericVal = parseMoneyInput(e.target.value);
+    setAmountStr(numericVal > 0 ? numericVal.toString() : "");
+    if (error) setError("");
+  };
+
+  const quickAmounts = [35000, 50000, 100000, 200000, 500000];
+
+  const handleSubmit = (e) => {
     e.preventDefault();
+    const numericAmount = parseMoneyInput(amountStr);
 
-    if (!form.amount || Number(form.amount) <= 0) {
-      alert('Nhập số tiền hợp lệ đã ông ơi.');
+    if (numericAmount <= 0) {
+      setError("Vui lòng nhập số tiền lớn hơn 0đ");
       return;
     }
 
-    addTransaction(form);
-
-    setForm({
-      type: 'expense',
-      date: today,
-      amount: '',
-      category: 'Mua sắm',
-      note: '',
-      paymentMethod: '',
+    onAdd({
+      type,
+      amount: numericAmount,
+      category,
+      date,
+      note: note || categories.find((c) => c.id === category)?.name,
     });
 
-    alert('Đã lưu giao dịch.');
-  }
+    setAmountStr("");
+    setNote("");
+    if (onSuccess) onSuccess();
+  };
 
   return (
-    <div className="mx-auto max-w-xl">
-      <h1 className="mb-6 text-3xl font-bold">
-        Thêm giao dịch
-      </h1>
+    <div className="card form-card animate-fade-in">
+      <div className="card-header">
+        <h2>Nhập giao dịch hàng ngày</h2>
+        <p className="subtitle">
+          Ghi chép nhanh các khoản thu chi & danh mục khác
+        </p>
+      </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-5 rounded-2xl bg-white p-6 shadow-sm"
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() =>
-              setForm(prev => ({
-                ...prev,
-                type: 'expense',
-                category: 'Mua sắm',
-              }))
-            }
-            className={`rounded-xl px-4 py-3 font-semibold ${
-              form.type === 'expense'
-                ? 'bg-red-600 text-white'
-                : 'bg-gray-100'
-            }`}
-          >
-            Chi tiêu
-          </button>
+      {/* Chuyển đổi Chi tiêu / Thu nhập */}
+      <div className="type-switcher">
+        <button
+          type="button"
+          className={`switch-btn ${type === "expense" ? "active-expense" : ""}`}
+          onClick={() => handleTypeChange("expense")}
+        >
+          💸 Khoản Chi Tiêu
+        </button>
+        <button
+          type="button"
+          className={`switch-btn ${type === "income" ? "active-income" : ""}`}
+          onClick={() => handleTypeChange("income")}
+        >
+          🌱 Khoản Thu Nhập
+        </button>
+      </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              setForm(prev => ({
-                ...prev,
-                type: 'income',
-                category: 'MindX',
-              }))
-            }
-            className={`rounded-xl px-4 py-3 font-semibold ${
-              form.type === 'income'
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-100'
-            }`}
-          >
-            Thu nhập
-          </button>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-semibold">
-            Ngày
-          </label>
+      <form onSubmit={handleSubmit} className="tx-form">
+        {/* Nhập số tiền */}
+        <div className="form-group">
+          <label>Số tiền ({amountStr ? formatMoney(amountStr) : "0 ₫"})</label>
           <input
-            type="date"
-            value={form.date}
-            onChange={e => updateField('date', e.target.value)}
-            className="w-full rounded-xl border px-4 py-3"
+            type="text"
+            inputMode="numeric"
+            placeholder="Nhập số tiền (VD: 50000)..."
+            value={amountStr ? Number(amountStr).toLocaleString("vi-VN") : ""}
+            onChange={handleAmountChange}
+            className="amount-input"
+            autoFocus
           />
-        </div>
+          {error && <span className="error-text">{error}</span>}
 
-        <div>
-          <label className="mb-1 block text-sm font-semibold">
-            Số tiền
-          </label>
-          <input
-            type="number"
-            value={form.amount}
-            onChange={e => updateField('amount', e.target.value)}
-            placeholder="VD: 300000"
-            className="w-full rounded-xl border px-4 py-3"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-semibold">
-            {form.type === 'expense' ? 'Danh mục' : 'Nguồn thu'}
-          </label>
-          <select
-            value={form.category}
-            onChange={e => updateField('category', e.target.value)}
-            className="w-full rounded-xl border px-4 py-3"
-          >
-            {categories.map(item => (
-              <option key={item} value={item}>
-                {item}
-              </option>
+          {/* Gợi ý nhập nhanh */}
+          <div className="quick-chips">
+            {quickAmounts.map((amt) => (
+              <button
+                key={amt}
+                type="button"
+                className="chip-btn"
+                onClick={() => setAmountStr(String(amt))}
+              >
+                +{formatMoney(amt)}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
-        {form.type === 'expense' && (
-          <div>
-            <label className="mb-1 block text-sm font-semibold">
-              Phương thức thanh toán
-            </label>
+        {/* Chọn danh mục */}
+        <div className="form-group">
+          <label>Chọn danh mục</label>
+          <div className="category-grid">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                className={`category-item ${category === cat.id ? "selected" : ""}`}
+                onClick={() => setCategory(cat.id)}
+              >
+                <span className="cat-icon">{cat.icon}</span>
+                <span className="cat-name">{cat.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Ngày & Ghi chú */}
+        <div className="form-row">
+          <div className="form-group">
+            <label>Ngày giao dịch</label>
             <input
-              value={form.paymentMethod}
-              onChange={e =>
-                updateField('paymentMethod', e.target.value)
-              }
-              placeholder="VD: Tiền mặt, SPay, Chuyển khoản..."
-              className="w-full rounded-xl border px-4 py-3"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
             />
           </div>
-        )}
 
-        <div>
-          <label className="mb-1 block text-sm font-semibold">
-            Ghi chú
-          </label>
-          <textarea
-            value={form.note}
-            onChange={e => updateField('note', e.target.value)}
-            placeholder="VD: Mua đồ cá nhân, lương tháng 7..."
-            className="min-h-24 w-full rounded-xl border px-4 py-3"
-          />
+          <div className="form-group">
+            <label>Ghi chú chi tiết</label>
+            <input
+              type="text"
+              placeholder="VD: Ăn sáng, đổ xăng, mua đồ..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
         </div>
 
-        <button
-          type="submit"
-          className="w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white"
-        >
-          Lưu giao dịch
+        <button type="submit" className="submit-btn">
+          Lưu Giao Dịch
         </button>
       </form>
     </div>
