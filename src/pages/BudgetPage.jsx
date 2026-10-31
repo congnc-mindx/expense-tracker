@@ -1,246 +1,131 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCategories } from "../context/CategoryContext";
-import { panel, input, primary, muted, button } from "../components/finance/ui";
+import BudgetLimitDialog from "../components/budget/BudgetLimitDialog";
+import BudgetProgressBar from "../components/budget/BudgetProgressBar";
+import { panel, primary, button, muted } from "../components/finance/ui";
 import { isActual } from "../utils/finance";
-import { formatMoney } from "../utils/money.js";
-import { formatVndAsThousands, parseThousandsToVnd, sanitizeThousandsInput } from "../utils/moneyInput.js";
-import { getBudgetProgress } from "../utils/budgetProgress.js";
-
-function BudgetCard({ name, spent, cap, onChange, onClear }) {
-  const limit = parseThousandsToVnd(cap, { allowZero: true }) || 0;
-  const progress = getBudgetProgress(spent, limit);
-  const { percentage, exceeded } = progress;
-  const remaining = Math.max(limit - spent, 0);
-  return (
-    <article className="grid gap-3 rounded-2xl border border-[#dce9df] bg-[#fbfdfb] p-4 dark:border-slate-800 dark:bg-slate-950/40">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-bold">{name}</h3>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Đã chi {formatMoney(spent)}</p>
-        </div>
-        <button type="button" disabled={!limit} className={`${button} !min-h-9 shrink-0 !px-3 !text-xs`} onClick={onClear}>Xóa hạn mức</button>
-      </div>
-      <label className="grid gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-        Hạn mức danh mục (nghìn đồng)
-        <input
-          aria-label={`Hạn mức ${name}`}
-          type="text"
-          inputMode="decimal"
-          placeholder="VD: 500"
-          value={cap || ""}
-          onChange={(e) => onChange(sanitizeThousandsInput(e.target.value))}
-          className={`${input} !text-sm font-semibold`}
-        />
-      </label>
-      <div className="grid gap-2">
-        <div className="flex items-center justify-between gap-3 text-xs font-semibold">
-          <span className={progress.textClass}>
-            {limit > 0 ? `${percentage}% đã dùng` : "Chưa đặt hạn mức"}
-          </span>
-          {limit > 0 && (
-            <span className={progress.textClass}>
-              {exceeded ? `Vượt ${formatMoney(spent - limit)}` : `Còn ${formatMoney(remaining)}`}
-            </span>
-          )}
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[#e8f1ea] dark:bg-slate-800">
-          <div
-            className={`h-full rounded-full transition-[width] duration-300 ${progress.barClass}`}
-            style={{ width: `${limit > 0 ? Math.min(percentage, 100) : 0}%` }}
-          />
-        </div>
-      </div>
-    </article>
-  );
-}
+import { formatMoney } from "../utils/money";
+import { budgetWithLimit } from "../utils/budgetEdits";
 
 export default function BudgetPage({ budget, rows, onSave }) {
-  const { expense: EXPENSE_CATEGORIES, getCategoryById } = useCategories();
-  // Only the form uses thousands. The cloud budget remains VND as before.
-  const [draft, setDraft] = useState(() => ({
-    total: budget.total ? formatVndAsThousands(budget.total) : "",
-    categories: Object.fromEntries(
-      Object.entries(budget.categories || {}).map(([id, amount]) => [id, amount ? formatVndAsThousands(amount) : ""]),
-    ),
-  }));
+  const { expense, getCategoryById } = useCategories();
+  const [editor, setEditor] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [failed, setFailed] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [showUnconfigured, setShowUnconfigured] = useState(false);
 
-  const amounts = {};
-  rows
-    .filter((tx) => tx.type === "expense" && isActual(tx))
-    .forEach((tx) => {
-      amounts[tx.category] = (amounts[tx.category] || 0) + tx.amount;
-    });
+  const limits = budget?.categories || {};
+  const total = Number(budget?.total) || 0;
+  const actual = useMemo(() => rows.filter((tx) => tx.type === "expense" && isActual(tx)), [rows]);
+  const spent = actual.reduce((sum, tx) => sum + tx.amount, 0);
+  const expensesByCategory = useMemo(() => {
+    const result = {};
+    actual.forEach((tx) => { result[tx.category] = (result[tx.category] || 0) + tx.amount; });
+    return result;
+  }, [actual]);
 
-  const total = parseThousandsToVnd(draft.total, { allowZero: true }) || 0;
-  const spent = rows
-    .filter((tx) => tx.type === "expense" && isActual(tx))
-    .reduce((sum, tx) => sum + tx.amount, 0);
-  const remaining = Math.max(total - spent, 0);
-  const exceeded = total > 0 && spent > total;
-  const progress = getBudgetProgress(spent, total);
-  const { percentage } = progress;
-  const trackedCategories = EXPENSE_CATEGORIES.filter((c) => !c.hidden && !c.locked)
-    .map((cat) => ({
-      id: cat.id,
-      name: getCategoryById(cat.id).name,
-      spent: amounts[cat.id] || 0,
-      cap: draft.categories?.[cat.id] || "",
-    }))
-    .sort((a, b) => (Number(Boolean(b.cap)) - Number(Boolean(a.cap))) || b.spent - a.spent || a.name.localeCompare(b.name, "vi"));
+  // Keep limits for hidden categories visible, so old data can always be edited/cleared.
+  const configured = Object.entries(limits)
+    .filter(([, amount]) => Number(amount) > 0)
+    .map(([id, amount]) => ({ ...getCategoryById(id), id, amount: Number(amount), spent: expensesByCategory[id] || 0 }))
+    .sort((a, b) => (b.spent / b.amount) - (a.spent / a.amount) || a.name.localeCompare(b.name, "vi"));
+  const canConfigure = expense.filter((cat) => !cat.hidden && !cat.locked);
+  const notConfigured = canConfigure.filter((cat) => !(Number(limits[cat.id]) > 0))
+    .sort((a, b) => (expensesByCategory[b.id] || 0) - (expensesByCategory[a.id] || 0));
+  const left = total - spent;
+  const overBudget = total > 0 && spent > total;
 
-  function updateTotal(value) {
-    setDraft((current) => ({ ...current, total: sanitizeThousandsInput(value) }));
-    setMessage("");
-  }
-  function updateCategoryCap(id, value) {
-    setDraft((current) => ({
-      ...current,
-      categories: { ...current.categories, [id]: sanitizeThousandsInput(value) },
-    }));
-    setMessage("");
-  }
-  function clearCategory(id) {
-    setDraft((current) => ({
-      ...current,
-      categories: { ...current.categories, [id]: "" },
-    }));
-    setMessage("");
-  }
-  function resetAll() {
-    if (typeof window !== "undefined" && !window.confirm("Xóa toàn bộ hạn mức trong tháng đang chọn? Các khoản chi thực tế vẫn được giữ nguyên.")) return;
-    setDraft({ total: "", categories: {} });
-    setMessage("");
+  async function commit({ categoryId, amount }) {
+    // Validate at the UI boundary. Cloud budgets are still integer VND.
+    const next = budgetWithLimit(budget, { categoryId, amount });
+    setBusy(true); setError(""); setMessage("");
+    try { await onSave(next); setMessage("Đã lưu hạn mức tháng này lên Firebase."); }
+    catch (reason) { throw reason; }
+    finally { setBusy(false); }
   }
 
-  async function submit(event) {
-    event.preventDefault();
-    const clean = {
-      total: draft.total.trim() ? parseThousandsToVnd(draft.total, { allowZero: true }) : 0,
-      categories: Object.fromEntries(
-        Object.entries(draft.categories || {})
-          .map(([id, value]) => [id, value.trim() ? parseThousandsToVnd(value, { allowZero: true }) : 0]),
-      ),
-    };
-    try {
-      if (
-        ![clean.total, ...Object.values(clean.categories)].every(
-          (n) => Number.isSafeInteger(n) && n >= 0,
-        )
-      ) {
-        throw new Error("Hạn mức phải là số tiền hợp lệ theo nghìn đồng (VD: 355 = 355.000 đ).");
-      }
-      setSaving(true);
-      await onSave(clean);
-      setFailed(false);
-      setMessage("Đã lưu ngân sách tháng này.");
-    } catch (reason) {
-      setFailed(true);
-      setMessage(reason.message || "Chưa lưu được ngân sách.");
-    } finally {
-      setSaving(false);
-    }
+  async function clear(categoryId) {
+    if (!window.confirm(`Xóa hạn mức của “${getCategoryById(categoryId).name}”? Giao dịch cũ không bị ảnh hưởng.`)) return;
+    try { await commit({ categoryId, amount: 0 }); }
+    catch (reason) { setError(reason?.message || "Không thể xóa hạn mức."); }
   }
 
-  return (
-    <form onSubmit={submit} className="grid gap-6">
-      <section className={`${panel} grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]`}>
-        <div className="grid gap-4">
-          <div>
-            <h2 className="text-lg font-extrabold tracking-tight">Ngân sách tháng đang chọn</h2>
-            <p className={`mt-2 ${muted}`}>
-              Đặt hạn mức chung và hạn mức theo danh mục. Bạn có thể sửa, xóa riêng từng hạn mức hoặc đặt lại toàn bộ tháng.
-            </p>
-          </div>
-          <label className="grid max-w-lg gap-2 text-sm font-semibold">
-            Tổng ngân sách tháng (nghìn đồng)
-            <input
-              type="text"
-              inputMode="decimal"
-              value={draft.total || ""}
-              onChange={(e) => updateTotal(e.target.value)}
-              placeholder="VD: 15.000 = 15.000.000 đ"
-              className={`${input} !text-lg font-bold`}
-            />
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {[5000000, 10000000, 15000000, 20000000].map((value) => (
-              <button key={value} type="button" className={`${button} !min-h-10 !px-3`} onClick={() => updateTotal(formatVndAsThousands(value))}>
-                {formatMoney(value)}
-              </button>
-            ))}
-          </div>
-        </div>
+  async function clearAll() {
+    if (!window.confirm("Xóa toàn bộ hạn mức tháng này? Tất cả giao dịch vẫn được giữ nguyên.")) return;
+    setBusy(true); setError(""); setMessage("");
+    try { await onSave({ total: 0, categories: {} }); setMessage("Đã xóa toàn bộ hạn mức tháng này."); }
+    catch (reason) { setError(reason?.message || "Không thể xóa ngân sách."); }
+    finally { setBusy(false); }
+  }
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-          <div className="rounded-2xl bg-[#eef7f0] p-4 dark:bg-slate-950/60">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Đã chi thực tế</p>
-            <p className="mt-2 text-2xl font-extrabold tabular-nums text-slate-900 dark:text-slate-100">{formatMoney(spent)}</p>
-          </div>
-          <div className="rounded-2xl bg-[#f6fbf7] p-4 dark:bg-slate-950/60">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Tiến độ sử dụng</p>
-                <p className={`mt-2 text-2xl font-extrabold tabular-nums ${progress.textClass}`}>
-                  {total > 0 ? `${percentage}%` : "—"}
-                </p>
-              </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-bold ${progress.badgeClass}`}>
-                {progress.shortLabel}
-              </span>
-            </div>
-            <p className="mt-2 text-sm tabular-nums text-slate-500 dark:text-slate-400">
-              {total > 0 ? `${formatMoney(spent)} / ${formatMoney(total)}` : "Đặt ngân sách tổng để theo dõi tiến độ."}
-            </p>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e3eee6] dark:bg-slate-800">
-              <div className={`h-full rounded-full ${progress.barClass}`} style={{ width: `${total > 0 ? Math.min(percentage, 100) : 0}%` }} />
-            </div>
-            {total > 0 && (
-              <p className={`mt-3 text-sm font-semibold ${progress.textClass}`}>
-                {exceeded ? `Bạn đang vượt ${formatMoney(spent - total)}` : `Bạn còn có thể chi ${formatMoney(remaining)}`}
-              </p>
-            )}
-          </div>
+  return <div className="grid min-w-0 gap-5 sm:gap-6" aria-busy={busy}>
+    <section className={panel}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Hạn mức tháng đang chọn</p>
+          <p className="mt-1 break-words text-2xl font-extrabold tracking-tight tabular-nums sm:text-3xl">{total > 0 ? formatMoney(total) : "Chưa đặt ngân sách"}</p>
+          <p className={`mt-2 ${muted}`}>Số chi thực tế được cập nhật tự động từ Thu/Chi và Sổ mừng.</p>
         </div>
-      </section>
-
-      <section className={panel}>
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight">Hạn mức theo danh mục</h2>
-            <p className={`mt-2 ${muted}`}>Ưu tiên kiểm soát từng nhóm chi thường xuyên. Danh mục nào không cần quản lý riêng có thể để trống hoặc xóa hạn mức.</p>
-          </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-          {trackedCategories.map((cat) => (
-            <BudgetCard
-              key={cat.id}
-              name={cat.name}
-              spent={cat.spent}
-              cap={cat.cap}
-              onChange={(value) => updateCategoryCap(cat.id, value)}
-              onClear={() => clearCategory(cat.id)}
-            />
-          ))}
-        </div>
-      </section>
-
-      <div className="sticky bottom-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-        <p
-          role={failed ? "alert" : "status"}
-          className={failed ? "text-sm text-rose-600 dark:text-rose-400" : muted}
-        >
-          {message || "Lưu để áp dụng hạn mức cho tháng đang chọn."}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={button} onClick={resetAll}>Xóa toàn bộ hạn mức</button>
-          <button type="submit" disabled={saving} className={primary}>
-            {saving ? "Đang lưu…" : "Lưu ngân sách"}
-          </button>
-        </div>
+        <button type="button" className={primary} disabled={busy} onClick={() => setEditor({ mode: "total" })}>
+          {total > 0 ? "Sửa ngân sách" : "+ Đặt ngân sách"}
+        </button>
       </div>
-    </form>
-  );
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl bg-[#f4f8f5] p-4 dark:bg-slate-950/50"><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Ngân sách</p><p className="mt-2 break-words text-lg font-extrabold tabular-nums">{formatMoney(total)}</p></div>
+        <div className="rounded-xl bg-[#f4f8f5] p-4 dark:bg-slate-950/50"><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Đã chi</p><p className="mt-2 break-words text-lg font-extrabold tabular-nums">{formatMoney(spent)}</p></div>
+        <div className="rounded-xl bg-[#f4f8f5] p-4 dark:bg-slate-950/50"><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{overBudget ? "Vượt ngân sách" : "Còn có thể chi"}</p>
+          <p className={`mt-2 break-words text-lg font-extrabold tabular-nums ${overBudget ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"}`}>{total > 0 ? formatMoney(Math.abs(left)) : "—"}</p></div>
+      </div>
+      <div className="mt-5"><BudgetProgressBar spent={spent} limit={total} title="Tiến độ ngân sách chung" large /></div>
+    </section>
+
+    {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">{error}</p>}
+    {message && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">{message}</p>}
+
+    <section className={panel}>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div><h2 className="text-lg font-extrabold">Hạn mức theo danh mục</h2>
+          <p className={`mt-1 ${muted}`}>Chỉ hiển thị danh mục đã đặt hạn mức. Các hạn mức riêng nằm trong ngân sách chung, không cộng thêm vào tổng.</p></div>
+        <button type="button" className={primary} disabled={busy || !notConfigured.length} onClick={() => setEditor({ mode: "category" })}>+ Thêm hạn mức</button>
+      </div>
+      {configured.length ? <div className="divide-y divide-[#e8eee9] dark:divide-slate-800">
+        {configured.map((cat) => <article key={cat.id} className="grid gap-3 py-4 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_minmax(180px,1.2fr)_auto] md:items-center md:gap-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-lg dark:bg-emerald-950/40">{cat.icon || "•"}</span>
+            <div className="min-w-0"><h3 className="truncate text-sm font-bold" title={cat.name}>{cat.name}</h3>
+              <p className="mt-1 text-xs tabular-nums text-slate-500 dark:text-slate-400">{formatMoney(cat.spent)} / {formatMoney(cat.amount)}{cat.hidden ? " · Đã ẩn" : ""}</p></div>
+          </div>
+          <BudgetProgressBar spent={cat.spent} limit={cat.amount} title={`Tiến độ ${cat.name}`} />
+          <div className="flex flex-wrap justify-end gap-2"><button type="button" className={`${button} !min-h-9 !px-3`} disabled={busy} onClick={() => setEditor({ mode: "category", categoryId: cat.id })}>Sửa</button>
+            <button type="button" className={`${button} !min-h-9 !px-3`} disabled={busy} onClick={() => clear(cat.id)}>Xóa hạn mức</button></div>
+        </article>)}
+      </div> : <div className="rounded-2xl border border-dashed border-[#cbded0] bg-[#f9fcfa] px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-950/30">
+        <p className="font-semibold">Chưa có hạn mức riêng cho danh mục</p><p className={`mt-2 ${muted}`}>Bạn có thể chỉ đặt ngân sách chung, hoặc bổ sung hạn mức cho những khoản chi cần kiểm soát.</p>
+        <button type="button" className={`${button} mt-4`} disabled={busy || !notConfigured.length} onClick={() => setEditor({ mode: "category" })}>+ Đặt hạn mức đầu tiên</button>
+      </div>}
+    </section>
+
+    {!!notConfigured.length && <section className={panel}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="font-bold">Danh mục chưa đặt hạn mức</h2><p className={`mt-1 ${muted}`}>Ưu tiên danh mục đang chi nhiều nhất trong tháng.</p></div>
+        <button type="button" className={button} aria-expanded={showUnconfigured} onClick={() => setShowUnconfigured((value) => !value)}>{showUnconfigured ? "Thu gọn" : `Xem ${notConfigured.length} danh mục`}</button>
+      </div>
+      {showUnconfigured && <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {notConfigured.map((cat) => <div key={cat.id} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-[#e2ece5] px-3 py-2.5 dark:border-slate-800">
+          <span className="min-w-0 truncate text-sm font-semibold" title={cat.name}>{cat.icon || "•"} {cat.name}<span className="ml-2 text-xs font-normal text-slate-500">{formatMoney(expensesByCategory[cat.id] || 0)}</span></span>
+          <button type="button" disabled={busy} className="shrink-0 text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400" onClick={() => setEditor({ mode: "category", categoryId: cat.id })}>Đặt hạn mức</button>
+        </div>)}
+      </div>}
+    </section>}
+
+    {(total > 0 || configured.length > 0) && <div className="flex justify-end"><button type="button" disabled={busy} className="text-sm font-semibold text-rose-600 underline-offset-4 hover:underline dark:text-rose-400" onClick={clearAll}>Xóa toàn bộ hạn mức tháng này</button></div>}
+
+    {editor && <BudgetLimitDialog
+      key={`${editor.mode}:${editor.categoryId || "new"}`}
+      mode={editor.mode}
+      categoryId={editor.categoryId}
+      categories={editor.mode === "total" ? [] : editor.categoryId ? [getCategoryById(editor.categoryId)] : notConfigured}
+      budget={budget} onSave={commit} onClose={() => setEditor(null)} />}
+  </div>;
 }

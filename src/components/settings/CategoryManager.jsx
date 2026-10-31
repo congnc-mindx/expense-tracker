@@ -1,198 +1,162 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import SmartSelect from "../common/SmartSelect";
+import CategoryEditorDialog from "./CategoryEditorDialog";
+import GroupManagerDialog from "./GroupManagerDialog";
 import { panel, button, input, muted, primary } from "../finance/ui";
 import { validateCategoryConfig } from "../../utils/categoryConfig";
+import { normalize } from "../../utils/finance";
 
-const createId = (type) => `${type}_custom_${crypto.randomUUID().replace(/-/g, "").slice(0, 18)}`;
+const makeId = (type) => `${type}_custom_${crypto.randomUUID().replace(/-/g, "").slice(0, 18)}`;
 
 export default function CategoryManager({ initial, onSave, usedCategoryIds = [] }) {
-  const [draft, setDraft] = useState(() => structuredClone(initial));
-  const [newNames, setNewNames] = useState({});
-  const [newGroup, setNewGroup] = useState("");
+  const [config, setConfig] = useState(() => structuredClone(initial));
+  const [type, setType] = useState("expense");
+  const [query, setQuery] = useState("");
+  const [groupFilter, setGroupFilter] = useState("all");
+  const [showHidden, setShowHidden] = useState(false);
+  const [editor, setEditor] = useState(null);
+  const [groupsOpen, setGroupsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [dirty, setDirty] = useState(false);
+  const [message, setMessage] = useState("");
 
-  function changeDraft(fn) {
-    setDraft((old) => fn(structuredClone(old)));
-    setDirty(true);
-    setError("");
-    setMessage("");
-  }
+  // Listen to Firebase snapshots without resetting filters, search, or the active tab.
+  useEffect(() => { setConfig(structuredClone(initial)); }, [initial]);
 
-  function editGroup(id, value) {
-    changeDraft((data) => {
-      const found = data.groups.find((x) => x.id === id);
-      if (found) found.name = value;
-      return data;
-    });
-  }
+  const items = useMemo(() => (config[type] || []).filter((cat) => {
+    if (!showHidden && cat.hidden) return false;
+    if (type === "expense" && groupFilter !== "all" && cat.groupId !== groupFilter) return false;
+    const groupName = config.groups.find((group) => group.id === cat.groupId)?.name || "";
+    return normalize(`${cat.name} ${groupName}`).includes(normalize(query));
+  }), [config, type, query, groupFilter, showHidden]);
+  const orderedGroups = type === "expense"
+    ? config.groups.filter((group) => items.some((cat) => cat.groupId === group.id))
+    : [{ id: "income", name: "Nguồn thu" }];
+  const countActive = config[type].filter((cat) => !cat.hidden).length;
+  const countHidden = config[type].filter((cat) => cat.hidden).length;
+  const blocked = (id) => usedCategoryIds.includes(id);
 
-  function editCategory(type, id, value) {
-    changeDraft((data) => {
-      const found = data[type].find((x) => x.id === id);
-      if (found) found.name = value;
-      return data;
-    });
-  }
-
-  function toggleCategory(type, id) {
-    changeDraft((data) => {
-      const item = data[type].find((x) => x.id === id);
-      if (item && !item.locked) item.hidden = !item.hidden;
-      return data;
-    });
-  }
-
-  function removeCategory(type, id) {
-    const item = draft[type].find((x) => x.id === id);
-    if (!item || item.locked) return;
-    if (usedCategoryIds.includes(id)) {
-      setError(`Danh mục “${item.name}” đang có giao dịch. Hãy dùng Ẩn để giữ nguyên báo cáo và lịch sử.`);
-      return;
-    }
-    if (typeof window !== "undefined" && !window.confirm(`Xóa danh mục “${item.name}”? Thao tác này chỉ dành cho danh mục chưa có giao dịch.`)) return;
-    changeDraft((data) => {
-      data[type] = data[type].filter((x) => x.id !== id);
-      return data;
-    });
-  }
-
-  function addCategory(type, groupId) {
-    const key = `${type}:${groupId}`;
-    const name = String(newNames[key] || "").trim();
-    if (!name) return;
-    changeDraft((data) => {
-      data[type].push({ id: createId(type), name, groupId, icon: type === "income" ? "↙" : "•", type, hidden: false });
-      return data;
-    });
-    setNewNames((prev) => ({ ...prev, [key]: "" }));
-  }
-
-  function addGroup() {
-    const name = newGroup.trim();
-    if (!name) return;
-    changeDraft((data) => {
-      data.groups.push({ id: createId("group"), name });
-      return data;
-    });
-    setNewGroup("");
-  }
-
-  function removeGroup(id) {
-    const group = draft.groups.find((item) => item.id === id);
-    const children = draft.expense.filter((cat) => cat.groupId === id);
-    if (!group) return;
-    if (children.length) {
-      setError(`Nhóm “${group.name}” vẫn còn ${children.length} danh mục. Hãy xóa hoặc chuyển hết danh mục trước khi xóa nhóm.`);
-      return;
-    }
-    if (typeof window !== "undefined" && !window.confirm(`Xóa nhóm “${group.name}”?`)) return;
-    changeDraft((data) => {
-      data.groups = data.groups.filter((item) => item.id !== id);
-      return data;
-    });
-  }
-
-  async function save() {
-    if (saving || !dirty) return;
-    setSaving(true);
-    setError("");
-    setMessage("");
+  async function persist(next, success = "Đã lưu thay đổi danh mục lên Firebase.") {
+    if (saving) return;
+    const clean = validateCategoryConfig(next);
+    setSaving(true); setError(""); setMessage("");
     try {
-      const clean = validateCategoryConfig(draft);
       await onSave(clean);
-      setDirty(false);
-      setMessage("Đã cập nhật danh mục trên Firebase.");
-    } catch (e) {
-      setError(e.message || "Không lưu được danh mục.");
-    } finally {
-      setSaving(false);
+      setConfig(clean);
+      setMessage(success);
+    } catch (reason) {
+      setError(reason?.message || "Không thể cập nhật danh mục.");
+      throw reason;
+    } finally { setSaving(false); }
+  }
+
+  async function saveCategory(fields) {
+    const next = structuredClone(config);
+    const existing = editor?.id ? next[type].find((cat) => cat.id === editor.id) : null;
+    if (editor?.id && !existing) throw new Error("Không tìm thấy danh mục để sửa.");
+    const duplicate = next[type].some((cat) => cat.id !== editor?.id && cat.groupId === (type === "income" ? "income" : fields.groupId)
+      && normalize(cat.name) === normalize(fields.name));
+    if (duplicate) throw new Error("Tên danh mục đã có trong nhóm này.");
+    if (existing) Object.assign(existing, fields);
+    else next[type].push({ id: makeId(type), type, name: fields.name, icon: fields.icon,
+      groupId: type === "income" ? "income" : fields.groupId, hidden: false });
+    await persist(next, existing ? "Đã cập nhật danh mục." : "Đã tạo danh mục mới.");
+  }
+
+  async function toggleCategory(cat) {
+    if (saving || cat.locked) return;
+    const next = structuredClone(config);
+    const item = next[type].find((x) => x.id === cat.id);
+    if (!item) return;
+    item.hidden = !item.hidden;
+    try { await persist(next, item.hidden ? "Đã ẩn danh mục khỏi form giao dịch mới." : "Đã hiện danh mục."); }
+    catch { /* persist already displays the error */ }
+  }
+
+  async function removeCategory(cat) {
+    if (saving || cat.locked) return;
+    const id = cat.id;
+    if (usedCategoryIds.includes(id)) {
+      setError(`Danh mục “${cat.name}” đã được sử dụng trong giao dịch hoặc ngân sách. Hãy Ẩn để bảo vệ dữ liệu cũ.`);
+      return;
     }
+    if (!window.confirm(`Xóa danh mục “${cat.name}”? Thao tác này không thể hoàn tác.`)) return;
+    const next = structuredClone(config);
+    next[type] = next[type].filter((item) => item.id !== id);
+    try { await persist(next, "Đã xóa danh mục chưa sử dụng."); }
+    catch { /* persist already displays the error */ }
   }
 
-  function categoryRows(type, groupId) {
-    const items = draft[type].filter((cat) => cat.groupId === groupId);
-    return (
-      <div className="grid gap-2">
-        {items.map((cat) => (
-          <div key={cat.id} className={`flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-950/40 ${cat.hidden ? "opacity-65" : ""}`}>
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#eff7f1] text-base dark:bg-slate-800">{cat.icon}</span>
-            <input
-              aria-label={`Tên danh mục ${cat.name}`}
-              value={cat.name}
-              disabled={cat.locked || saving}
-              maxLength={80}
-              onChange={(e) => editCategory(type, cat.id, e.target.value)}
-              className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm font-semibold outline-none hover:border-slate-300 focus:border-emerald-500 dark:hover:border-slate-700 dark:focus:border-emerald-500"
-            />
-            {cat.locked ? (
-              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Tự động</span>
-            ) : (
-              <div className="flex shrink-0 flex-wrap justify-end gap-2">
-                <button type="button" disabled={saving} className={`${button} !min-h-9 !px-2.5 !text-xs`} onClick={() => toggleCategory(type, cat.id)}>
-                  {cat.hidden ? "Hiện" : "Ẩn"}
-                </button>
-                <button type="button" disabled={saving || usedCategoryIds.includes(cat.id)} title={usedCategoryIds.includes(cat.id) ? "Danh mục đang có giao dịch: chỉ có thể ẩn" : "Xóa danh mục chưa sử dụng"} className={`${button} !min-h-9 !px-2.5 !text-xs`} onClick={() => removeCategory(type, cat.id)}>
-                  Xóa
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-        <div className="flex items-center gap-2 pt-1">
-          <input className={`${input} min-w-0 !min-h-10 !text-sm`} aria-label="Tên danh mục mới" placeholder="Thêm danh mục…" value={newNames[`${type}:${groupId}`] || ""} maxLength={80} onChange={(e)=>setNewNames((p)=>({...p,[`${type}:${groupId}`]:e.target.value}))} onKeyDown={(e)=>{if(e.key==="Enter"){e.preventDefault(); addCategory(type,groupId);}}}/>
-          <button type="button" className={`${button} !min-h-10 shrink-0 !px-3`} onClick={()=>addCategory(type,groupId)}>Thêm</button>
-        </div>
-      </div>
-    );
+  async function saveGroups(groups) {
+    const next = { ...structuredClone(config), groups };
+    // validateCategoryConfig also prevents deleting a group used by a category.
+    await persist(next, "Đã cập nhật các nhóm chi tiêu.");
   }
 
-  return <section className={panel}>
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h2 className="text-lg font-extrabold">Quản lý danh mục</h2>
-        <p className={`mt-2 max-w-3xl ${muted}`}>Thêm, đổi tên, ẩn hoặc xóa danh mục. Chỉ có thể xóa danh mục chưa có giao dịch; với danh mục đang sử dụng, hãy chọn Ẩn để giữ nguyên lịch sử. Danh mục tự động của Sổ mừng được khóa để bảo vệ dữ liệu.</p>
+  function CategoryRow({ cat }) {
+    const groupName = config.groups.find((group) => group.id === cat.groupId)?.name;
+    return <div className={`flex min-w-0 flex-wrap items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[#f4f9f5] dark:hover:bg-slate-800/40 ${cat.hidden ? "opacity-65" : ""}`}>
+      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#edf7f0] text-lg dark:bg-emerald-950/30">{cat.icon || "•"}</span>
+      <div className="min-w-0 flex-[1_1_130px]">
+        <p className="truncate text-sm font-bold" title={cat.name}>{cat.name}</p>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{cat.locked ? "Hệ thống tự động" : cat.hidden ? "Đang ẩn" : groupName || "Đang sử dụng"}</p>
       </div>
-      <button type="button" className={primary} disabled={saving || !dirty} onClick={save}>{saving ? "Đang lưu…" : "Lưu thay đổi"}</button>
-    </div>
-    {error && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-300">{error}</p>}
-    {message && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">{message}</p>}
-    {dirty && <p className="mb-4 text-xs font-semibold text-amber-600 dark:text-amber-400">Có thay đổi chưa lưu lên Firebase.</p>}
+      <div className="ml-auto flex flex-wrap justify-end gap-2">
+        {cat.locked ? <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500 dark:bg-slate-800">Được bảo vệ</span> : <>
+          <button type="button" className={`${button} !min-h-9 !px-3`} disabled={saving} onClick={() => setEditor({ id: cat.id })}>Sửa</button>
+          <button type="button" className={`${button} !min-h-9 !px-3`} disabled={saving} onClick={() => toggleCategory(cat)}>{cat.hidden ? "Hiện" : "Ẩn"}</button>
+          <button type="button" className={`${button} !min-h-9 !px-3`} disabled={saving || usedCategoryIds.includes(cat.id)}
+            title={blocked(cat.id) ? "Đã sử dụng: chỉ có thể ẩn" : "Xóa danh mục chưa dùng"} onClick={() => removeCategory(cat)}>Xóa</button>
+        </>}
+      </div>
+    </div>;
+  }
 
-    <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="rounded-2xl border border-[#dce9df] bg-[#fbfdfb] p-4 dark:border-slate-800 dark:bg-slate-950/40">
-        <h3 className="font-bold">Nhóm chi tiêu</h3>
-        <p className={`mt-1 ${muted}`}>Tạo nhóm để gom các danh mục chi tiêu cùng chủ đề.</p>
-      </div>
-      <div className="rounded-2xl border border-[#dce9df] bg-[#fbfdfb] p-4 dark:border-slate-800 dark:bg-slate-950/40">
-        <h3 className="mb-3 font-bold">Thêm nhóm mới</h3>
-        <div className="flex gap-2"><input className={`${input} min-w-0 !text-sm`} value={newGroup} maxLength={80} placeholder="VD: Học tập" onChange={(e)=>setNewGroup(e.target.value)} onKeyDown={(e)=>{if(e.key==="Enter"){e.preventDefault();addGroup();}}}/><button type="button" className={button} onClick={addGroup}>Thêm nhóm</button></div>
+  return <section className={panel} aria-busy={saving}>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h2 className="text-lg font-extrabold">Quản lý danh mục</h2>
+        <p className={`mt-1 ${muted}`}>Tìm và chỉnh sửa đúng danh mục bạn cần. Mỗi thao tác lưu trực tiếp lên Firebase.</p></div>
+      <div className="flex flex-wrap gap-2">
+        {type === "expense" && <button type="button" className={button} disabled={saving} onClick={() => setGroupsOpen(true)}>Quản lý nhóm</button>}
+        <button type="button" className={primary} disabled={saving} onClick={() => setEditor({ id: null })}>+ Thêm danh mục</button>
       </div>
     </div>
-
-    <div className="grid gap-6 xl:grid-cols-2">
-      {draft.groups.map((group) => <div key={group.id} className="min-w-0 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-          <label className="grid min-w-0 flex-1 gap-2 text-xs font-bold text-slate-500">Tên nhóm chi tiêu
-            <input aria-label={`Tên nhóm ${group.name}`} maxLength={80} className={`${input} !text-sm font-bold`} disabled={saving} value={group.name} onChange={(e)=>editGroup(group.id,e.target.value)}/>
-          </label>
-          <button type="button" className={`${button} !min-h-10 !px-3`} onClick={() => removeGroup(group.id)}>Xóa nhóm</button>
+    <div className="mt-5 flex flex-wrap items-center gap-2 border-b border-[#e2eee5] pb-4 dark:border-slate-800" role="group" aria-label="Loại danh mục">
+      {[["expense", "Chi tiêu"], ["income", "Thu nhập"]].map(([id, label]) => <button key={id} type="button" aria-pressed={type === id}
+        className={`min-h-10 rounded-xl px-4 text-sm font-bold transition-colors ${type === id ? "bg-emerald-600 text-white" : "text-slate-600 hover:bg-emerald-50 dark:text-slate-300 dark:hover:bg-slate-800"}`}
+        onClick={() => { setType(id); setGroupFilter("all"); }}>{label}</button>)}
+      <span className="ml-auto text-xs font-medium text-slate-500 dark:text-slate-400">{countActive} đang hiện · {countHidden} đã ẩn</span>
+    </div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
+      <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">Tìm danh mục
+        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tên danh mục…" className={`${input} !text-sm`}/>
+      </label>
+      {type === "expense" && <div className="grid min-w-0 gap-1.5"><label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Nhóm chi tiêu</label>
+        <SmartSelect label="Lọc theo nhóm chi tiêu" value={groupFilter} onChange={setGroupFilter}
+          options={[{ value: "all", label: "Tất cả nhóm" }, ...config.groups.map((g) => ({ value: g.id, label: g.name }))]} />
+      </div>}
+      <label className="flex min-h-11 cursor-pointer items-center gap-2 whitespace-nowrap text-sm font-semibold text-slate-600 dark:text-slate-300">
+        <input type="checkbox" className="size-4 accent-emerald-600" checked={showHidden} onChange={(event) => setShowHidden(event.target.checked)}/> Hiện danh mục ẩn
+      </label>
+    </div>
+    {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-300">{error}</p>}
+    {message && <p role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{message}</p>}
+    <div className="mt-5 grid gap-4">
+      {orderedGroups.length ? orderedGroups.map((group) => <div key={group.id} className="overflow-hidden rounded-2xl border border-[#e2eee5] dark:border-slate-800">
+        <div className="flex items-center justify-between bg-[#f5faf6] px-4 py-3 dark:bg-slate-950/40">
+          <h3 className="text-sm font-bold">{group.name}</h3><span className="text-xs text-slate-500 dark:text-slate-400">{items.filter((cat) => cat.groupId === group.id).length} danh mục</span>
         </div>
-        {categoryRows("expense", group.id)}
-      </div>)}
-
-      <div className="min-w-0 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-bold">Danh mục thu nhập</h3>
-            <p className={`mt-1 ${muted}`}>Bạn có thể thêm, đổi tên hoặc xóa các nguồn thu riêng của mình.</p>
-          </div>
+        <div className="divide-y divide-[#eef3ef] px-1 dark:divide-slate-800">
+          {items.filter((cat) => cat.groupId === group.id).map((cat) => <CategoryRow key={cat.id} cat={cat}/>)}
         </div>
-        {categoryRows("income", "income")}
-      </div>
+      </div>) : <div className="rounded-2xl border border-dashed border-[#d0e1d5] px-5 py-10 text-center dark:border-slate-700">
+        <p className="font-semibold">Không có danh mục phù hợp</p><p className={`mt-2 ${muted}`}>Thử tìm tên khác, đổi bộ lọc hoặc bật hiển thị danh mục ẩn.</p>
+      </div>}
     </div>
+    <p className="mt-5 text-xs leading-5 text-slate-500 dark:text-slate-400">Danh mục đang có giao dịch hoặc hạn mức ngân sách sẽ không được xóa. Bạn có thể đổi tên, đổi nhóm hoặc ẩn mà không làm mất lịch sử; các danh mục tự động được bảo vệ.</p>
 
-    <div className="mt-5 flex justify-end"><button className={primary} type="button" disabled={saving || !dirty} onClick={save}>{saving ? "Đang lưu…" : "Lưu danh mục lên Firebase"}</button></div>
+    {editor && <CategoryEditorDialog key={`${type}:${editor.id || "new"}`} item={editor.id ? config[type].find((cat) => cat.id === editor.id) : null}
+      type={type} groups={config.groups} onSave={saveCategory} onClose={() => setEditor(null)}/>} 
+    {groupsOpen && <GroupManagerDialog groups={config.groups} expense={config.expense} onSave={saveGroups} onClose={() => setGroupsOpen(false)} />}
   </section>;
 }

@@ -19,17 +19,28 @@ test("Chỉ mở trình quản lý danh mục sau khi tải dữ liệu Firebase
   assert.match(app, /busy \? <div/);
   assert.match(app, /usedCategoryIds=\{usedCategoryIds\}/);
   assert.match(app, /Không thể xóa danh mục đang có giao dịch/);
+  assert.match(app, /categoryIdsInBudgets/);
 });
 
-test("Quản lý danh mục chặn xóa khi đã có giao dịch", () => {
+test("Quản lý danh mục chặn xóa khi đã có giao dịch hoặc hạn mức", () => {
   const categories = read("src/components/settings/CategoryManager.jsx");
+  const editor = read("src/components/settings/CategoryEditorDialog.jsx");
+  const groups = read("src/components/settings/GroupManagerDialog.jsx");
   assert.match(categories, /usedCategoryIds\.includes\(id\)/);
   assert.match(categories, /saving \|\| usedCategoryIds\.includes\(cat\.id\)/);
   assert.match(categories, /toggleCategory/);
-  assert.match(categories, /removeGroup/);
+  assert.match(categories, /removeCategory/);
+  assert.match(categories, /GroupManagerDialog/);
+  assert.match(editor, /onSave/);
+  assert.match(groups, /removeGroup/);
 });
 
-test("Trang ngân sách có thao tác lưu, sửa và xóa hạn mức", () => {
+test("Ngân sách chỉnh sửa theo từng hạn mức, có xác nhận xóa", () => {
   const page = read("src/pages/BudgetPage.jsx");
-  for (const word of ["Xóa hạn mức", "Lưu ngân sách", "Xóa toàn bộ hạn mức", "window.confirm"]) assert.ok(page.includes(word));
+  const editor = read("src/components/budget/BudgetLimitDialog.jsx");
+  assert.match(page, /Xóa hạn mức/);
+  assert.match(page, /Xóa toàn bộ hạn mức/);
+  assert.match(page, /window.confirm/);
+  assert.match(page, /BudgetLimitDialog/);
+  assert.match(editor, /Lưu hạn mức/);
 });
