@@ -1,20 +1,22 @@
 {
   "name": "expense-tracker",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "test:logic": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "firebase": "12.19.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,36 +1,20 @@
-export const EXPENSE_CATEGORIES = [
-  { id: "food", name: "Ăn uống", icon: "🍜", color: "#4CAF50" },
-  { id: "transport", name: "Di chuyển", icon: "🛵", color: "#26A69A" },
-  { id: "shopping", name: "Mua sắm", icon: "🛍️", color: "#66BB6A" },
-  { id: "bills", name: "Hóa đơn & Nhà ở", icon: "⚡", color: "#FFA726" },
-  { id: "entertainment", name: "Giải trí", icon: "🎬", color: "#AB47BC" },
-  { id: "health", name: "Sức khỏe", icon: "💊", color: "#EF5350" },
-  { id: "education", name: "Học tập", icon: "📚", color: "#42A5F5" },
-  { id: "other_expense", name: "Chi tiêu khác", icon: "📦", color: "#78909C" },
+// Danh mục khởi tạo theo file chi tiêu. ID ổn định khi lưu trên Firestore.
+export const EXPENSE_GROUPS = [
+  {id:'essential',name:'Sinh hoạt'}, {id:'relationships',name:'Gia đình & quan hệ'},
+  {id:'personal',name:'Cá nhân'}, {id:'activities',name:'Hoạt động & sở thích'},
+  {id:'other',name:'Khác'},
 ];
-
+const expense = [
+  ['food','Ăn uống','essential','🍜'],['transport','Xe cộ','essential','🚗'],['phone','Điện thoại','essential','📱'],
+  ['family','Gia đình','relationships','🏡'],['friends','Bạn bè','relationships','👥'],['dating','Hẹn hò','relationships','❤️'],['social','Giao lưu','relationships','🎉'],
+  ['shopping','Mua sắm','personal','🛍️'],['beauty','Làm đẹp','personal','✨'],['spay','SPay','personal','💳'],
+  ['pet','Pet','activities','🐾'],['travel','Du lịch','activities','✈️'],['technology','Công nghệ','activities','💻'],['sports','Thể thao','activities','🏋️'],['ocvoivoii','Ocvoivoii','activities','🐌'],
+  ['other_expense','Cần phân loại','other','📁'],
+];
+export const EXPENSE_CATEGORIES = expense.map(([id,name,groupId,icon])=>({id,name,groupId,icon,type:'expense'}));
 export const INCOME_CATEGORIES = [
-  { id: "salary", name: "Lương", icon: "💰", color: "#2E7D32" },
-  { id: "bonus", name: "Thưởng & Phụ cấp", icon: "🎁", color: "#43A047" },
-  { id: "investment", name: "Đầu tư", icon: "📈", color: "#00897B" },
-  { id: "other_income", name: "Thu nhập khác", icon: "✨", color: "#81C784" },
-];
-
-export const DEFAULT_SETTINGS = {
-  currency: "VND",
-  locale: "vi-VN",
-  monthlyBudget: 15000000,
-};
-
-export const getCategoryById = (categoryId) => {
-  return (
-    [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].find(
-      (c) => c.id === categoryId,
-    ) || {
-      id: "other_expense",
-      name: "Mục khác",
-      icon: "📌",
-      color: "#90A4AE",
-    }
-  );
-};
+  ['salary','Lương'],['mindx','MindX'],['colorful','Colorful Music'],['pyramid','Pyramid'],['external','Thu ngoài'],['other_income','Thu khác']
+].map(([id,name])=>({id,name,groupId:'income',icon:'↙',type:'income'}));
+export function getCategoryById(id) {
+ return [...EXPENSE_CATEGORIES,...INCOME_CATEGORIES].find(item=>item.id===id) || {id, name:'Không xác định',groupId:'other',icon:'•',type:'expense'};
+}

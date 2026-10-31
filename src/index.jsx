@@ -1,10 +1,3 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Compatibility entry for old Vite templates that referenced /src/index.jsx.
+// Do NOT mount App with a dummy user: all access must pass Firebase AuthGate.
+import "./main.jsx";
