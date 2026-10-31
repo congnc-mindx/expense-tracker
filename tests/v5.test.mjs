@@ -51,6 +51,6 @@ test("zWhisFlow đầy đủ thương hiệu và bỏ liên kết trên trang T�
   for (const file of ["src/auth/LoginPage.jsx","src/components/finance/FinanceLayout.jsx","src/firebase/backup.js","index.html"]) assert.match(read(file),/zWhisFlow/);
   assert.doesNotMatch(read("src/pages/OverviewPage.jsx"),/Mở sổ mừng &/);
   assert.match(read("src/pages/SettingsPage.jsx"),/CategoryManager/);
-  assert.match(read("src/components/social/SocialPeopleTable.jsx"),/border-r-4/);
+  assert.match(read("src/components/social/SocialPeopleTable.jsx"),/border-l-4/);
   assert.match(read("src/components/social/SocialEntryModal.jsx"),/DatePicker/);
 });

@@ -20,7 +20,7 @@ test("login có hai chế độ ghi nhớ do Firebase quản lý", () => {
 });
 
 test("Sổ mừng có menu và đường dẫn từ Tổng quan", () => {
-  assert.match(source("../src/App.jsx"), /page === "social" \? <SocialLedgerPage/);
+  assert.match(source("../src/App.jsx"), /page === "social" && <SocialLedgerPage/);
   assert.match(source("../src/components/finance/FinanceLayout.jsx"), /\["social", "Sổ mừng & thăm hỏi"/);
   assert.match(source("../src/pages/OverviewPage.jsx"), /onNavigate\("social"\)/);
 });

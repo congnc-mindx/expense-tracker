@@ -50,7 +50,7 @@ export default function TransactionsPage({ type, rows, onEdit, onDelete, onSocia
         ]}
       />
       {type === "income" && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
           <strong>MindX · Chưa kết nối tự động.</strong> Bạn có thể ghi nguồn
           thu “MindX” thủ công. Chỉ khoản đã nhận và đã đến ngày mới tính vào
           thực thu.

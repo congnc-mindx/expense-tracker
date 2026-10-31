@@ -2,21 +2,22 @@ import { useState } from "react";
 import useYearPlan from "../hooks/useYearPlan";
 import { buildYearSummary } from "../utils/yearSummary";
 import { formatMoney } from "../utils/money.js";
+import { formatVndAsThousands, parseThousandsToVnd, sanitizeThousandsInput } from "../utils/moneyInput.js";
 import FinanceCards from "../components/finance/FinanceCards";
 import { input, button, primary } from "../components/finance/ui";
 
 function MonthForm({ row, onSave, onClose }) {
   const [target, setTarget] = useState(
-    row.target === null ? "" : String(row.target),
+    row.target === null ? "" : formatVndAsThousands(row.target),
   );
-  const [savings, setSavings] = useState(String(row.savings));
+  const [savings, setSavings] = useState(formatVndAsThousands(row.savings));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const submit = async (event) => {
     event.preventDefault();
     const values = {
-      target: target === "" ? null : Number(target),
-      savings: Number(savings || 0),
+      target: target === "" ? null : parseThousandsToVnd(target, { allowZero: true }),
+      savings: savings === "" ? 0 : parseThousandsToVnd(savings, { allowZero: true }),
     };
     if (
       ![values.target, values.savings].every(
@@ -24,7 +25,7 @@ function MonthForm({ row, onSave, onClose }) {
           value === null || (Number.isSafeInteger(value) && value >= 0),
       )
     ) {
-      setError("Nhập số nguyên không âm hợp lệ, đơn vị đồng.");
+      setError("Nhập tiền hợp lệ theo nghìn đồng. VD: 355 = 355.000 đ.");
       return;
     }
     setSaving(true);
@@ -35,30 +36,28 @@ function MonthForm({ row, onSave, onClose }) {
   return (
     <form
       onSubmit={submit}
-      className="grid gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900 dark:bg-slate-900"
+      className="grid gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900 dark:bg-slate-900"
     >
       <h3 className="m-0 font-bold">Chỉnh tháng {row.month}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm">
-          Mục tiêu thu nhập (đồng)
+          Mục tiêu thu nhập (nghìn đồng)
           <input
-            type="number"
-            min="0"
-            step="1"
+            type="text"
+            inputMode="decimal"
             value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            placeholder="VD: 10000000"
+            onChange={(e) => setTarget(sanitizeThousandsInput(e.target.value))}
+            placeholder="VD: 10.000"
             className={input}
           />
         </label>
         <label className="grid gap-2 text-sm">
-          Tiền đã để riêng tiết kiệm (đồng)
+          Tiền đã để riêng tiết kiệm (nghìn đồng)
           <input
-            type="number"
-            min="0"
-            step="1"
+            type="text"
+            inputMode="decimal"
             value={savings}
-            onChange={(e) => setSavings(e.target.value)}
+            onChange={(e) => setSavings(sanitizeThousandsInput(e.target.value))}
             disabled={row.future}
             className={input}
           />

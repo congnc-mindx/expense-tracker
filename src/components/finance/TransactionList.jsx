@@ -4,7 +4,12 @@ import { formatMoney } from "../../utils/money.js";
 import { isActual } from "../../utils/finance";
 import { button, muted } from "./ui";
 
-export default function TransactionList({ rows, onEdit, onDelete, onSocialNavigate }) {
+export default function TransactionList({
+  rows,
+  onEdit,
+  onDelete,
+  onSocialNavigate,
+}) {
   const { getCategoryById } = useCategories();
   const [pending, setPending] = useState(null);
   const [error, setError] = useState("");
@@ -64,7 +69,15 @@ export default function TransactionList({ rows, onEdit, onDelete, onSocialNaviga
             </p>
             {(onEdit || tx.origin === "social") && (
               <div className="flex w-full justify-end gap-2 sm:w-auto">
-                {tx.origin === "social" ? <button type="button" className={button} onClick={onSocialNavigate}>Xem trong sổ</button> : pending === tx.id ? (
+                {tx.origin === "social" ? (
+                  <button
+                    type="button"
+                    className={button}
+                    onClick={onSocialNavigate}
+                  >
+                    Xem trong sổ
+                  </button>
+                ) : pending === tx.id ? (
                   <>
                     <span className="self-center text-xs">Xóa khoản này?</span>
                     <button

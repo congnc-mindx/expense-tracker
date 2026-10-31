@@ -7,7 +7,12 @@ export function validDate(value) {
     return false;
   const [y, m, d] = value.split("-").map(Number);
   return (
-    y >= MIN_YEAR && y <= MAX_YEAR && m >= 1 && m <= 12 && d >= 1 && d <= new Date(y, m, 0).getDate()
+    y >= MIN_YEAR &&
+    y <= MAX_YEAR &&
+    m >= 1 &&
+    m <= 12 &&
+    d >= 1 &&
+    d <= new Date(y, m, 0).getDate()
   );
 }
 export function isActual(tx, today = localDate()) {

@@ -2,18 +2,46 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Global interaction affordances. Never make disabled controls appear active. */
-button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, select:not(:disabled), input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled) { cursor: pointer; }
-button:disabled, select:disabled { cursor: not-allowed; }
-button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
-:where(button, a, input, textarea, select):focus-visible { outline-offset: 2px; }
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary,
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+:where(button, a, input, textarea, select):focus-visible {
+  outline-offset: 2px;
+}
 /* Keep grids and tables from stretching the entire page beyond the viewport. */
-#root, main, section { min-width: 0; }
+#root,
+main,
+section {
+  min-width: 0;
+}
 
 /* Compact login first fold on laptop browsers; preserve scrolling for tiny screens. */
 @media (min-width: 1024px) and (max-height: 740px) {
-  .login-benefits { display: none; }
-  .login-footnote { font-size: 11px; }
+  .login-benefits {
+    display: none;
+  }
+  .login-footnote {
+    font-size: 11px;
+  }
 }
 @media (min-width: 1024px) and (max-height: 620px) {
-  .login-brand { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+  .login-brand {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
 }
