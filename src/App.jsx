@@ -64,7 +64,7 @@ export default function App({ user, onSignOut, signingOut, logoutError }) {
      page === "social" ? <SocialLedgerPage store={socialStore} addSignal={socialAddSignal} /> :
      busy ? <div className="rounded-2xl bg-white p-8 text-center text-slate-500 dark:bg-slate-900">Đang tải dữ liệu từ Firebase…</div> :
      readError ? null : <>
-       {page === "overview" && <OverviewPage rows={rows} budget={budget} onNavigate={setPage} />}
+       {page === "overview" && <OverviewPage rows={rows} allTransactions={combinedTransactions} month={month} onMonthChange={setMonth} budget={budget} onNavigate={setPage} />}
        {["expense", "income"].includes(page) && <TransactionsPage key={`${page}:${month}`} type={page} rows={rows} onEdit={(transaction) => setModal({ type: transaction.type, transaction })} onDelete={deleteTransaction} onSocialNavigate={() => setPage("social")} />}
        {page === "budget" && <BudgetPage key={month} budget={budget} rows={rows} onSave={saveBudget} />}
        {page === "summary" && <SummaryPage transactions={combinedTransactions} userId={user.uid} month={month} mode={summaryMode} onModeChange={setSummaryMode} year={summaryYear} />}
