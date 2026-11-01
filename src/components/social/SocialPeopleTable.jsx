@@ -1,4 +1,4 @@
-import { formatThousands } from "../../utils/socialMoney";
+import { formatMoney } from "../../utils/money";
 import { socialDirectionSummary } from "../../utils/socialView";
 import { button, muted } from "../finance/ui";
 
@@ -8,14 +8,14 @@ function DirectionSummary({ entries, direction, occasion }) {
   return (
     <div className="min-w-0 space-y-1.5">
       <p className={`text-base font-extrabold tabular-nums ${summary.total ? (incoming ? "text-emerald-700 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400") : "text-slate-400 dark:text-slate-500"}`}>
-        {summary.total ? formatThousands(summary.total) : "—"}
+        {summary.total ? formatMoney(summary.total) : "—"}
       </p>
       {summary.occasions.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {summary.occasions.map((item) => (
-            <span key={item.id} className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1 text-[13px] leading-5 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title={`${item.label}: ${formatThousands(item.amount)} nghìn đồng`}>
+            <span key={item.id} className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1 text-[13px] leading-5 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title={`${item.label}: ${formatMoney(item.amount)}`}>
               <span className="truncate">{item.label}</span>
-              {summary.occasions.length > 1 && <strong className="shrink-0 tabular-nums text-slate-800 dark:text-slate-100">{formatThousands(item.amount)}</strong>}
+              {summary.occasions.length > 1 && <strong className="shrink-0 tabular-nums text-slate-800 dark:text-slate-100">{formatMoney(item.amount)}</strong>}
             </span>
           ))}
         </div>
@@ -31,7 +31,7 @@ export default function SocialPeopleTable({ people, occasion, onSelect }) {
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
         <span>Bấm tên hoặc “Xem / Sửa” để quản lý từng khoản</span>
-        <span className="font-semibold">Đơn vị: 1.000 đồng</span>
+        <span className="font-semibold">Đơn vị: đồng</span>
       </div>
       <div className="grid gap-3 xl:hidden">
         {people.map((person) => (

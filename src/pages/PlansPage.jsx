@@ -1,7 +1,12 @@
 import useIncrementalList from "../components/common/useIncrementalList";
+import MonthPicker from "../components/common/MonthPicker";
+import YearPicker from "../components/common/YearPicker";
+import { filterPlansByPeriod } from "../utils/planPeriods";
+import { localDate } from "../utils/finance";
 import LoadMoreButton from "../components/common/LoadMoreButton";
 import { useMemo, useState } from "react";
 import { panel, button, primary, input, muted } from "../components/finance/ui";
+import { useConfirm } from "../components/common/ConfirmProvider";
 import { formatMoney } from "../utils/money";
 import { filteredPlans, planCategory, planDeadline, planFunding, planProgress, planTasksProgress, validatePlan } from "../utils/plans";
 import PlanDialog from "../components/plans/PlanDialog";
@@ -66,8 +71,12 @@ function PlanCard({ plan, busy, onView, onEdit, onRemove, onToggleCompleted, onT
 }
 
 export default function PlansPage({ store, addSignal = 0 }) {
+  const confirm = useConfirm();
   const [filter, setFilter] = useState("active");
   const [query, setQuery] = useState("");
+  const [periodScope, setPeriodScope] = useState("all");
+  const [periodMonth, setPeriodMonth] = useState(() => localDate().slice(0, 7));
+  const [periodYear, setPeriodYear] = useState(() => Number(localDate().slice(0, 4)));
   const [editing, setEditing] = useState(undefined);
   const [viewingId, setViewingId] = useState(null);
   const lastSignal = useRef(addSignal);
@@ -77,14 +86,17 @@ export default function PlansPage({ store, addSignal = 0 }) {
   const [celebration, setCelebration] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
-  const plans = useMemo(() => filteredPlans(store.rows, { filter, query }), [store.rows, filter, query]);
-  const paging = useIncrementalList(plans, [filter,query], 10);
-  const total = store.rows.length;
-  const active = store.rows.filter((item) => item.status !== "completed").length;
+  const periodPlans = useMemo(() => filterPlansByPeriod(store.rows, {
+    scope: periodScope, month: periodMonth, year: periodYear,
+  }), [store.rows, periodScope, periodMonth, periodYear]);
+  const plans = useMemo(() => filteredPlans(periodPlans, { filter, query }), [periodPlans, filter, query]);
+  const paging = useIncrementalList(plans, [filter, query, periodScope, periodMonth, periodYear], 10);
+  const total = periodPlans.length;
+  const active = periodPlans.filter((item) => item.status !== "completed").length;
   const done = total - active;
-  const unfinished = store.rows.filter((item) => item.status !== "completed");
+  const unfinished = periodPlans.filter((item) => item.status !== "completed");
   const plannedCost = unfinished.reduce((sum, item) => sum + (Number(item.targetAmount) || 0), 0);
-  const totalPrepared = store.rows.reduce((sum, item) => sum + planProgress(item).prepared, 0);
+  const totalPrepared = periodPlans.reduce((sum, item) => sum + planProgress(item).prepared, 0);
   const viewingPlan = store.rows.find((item) => item.id === viewingId);
 
   async function savePlan(next, id) {
@@ -130,34 +142,43 @@ export default function PlansPage({ store, addSignal = 0 }) {
   }
 
   async function removePlan(plan) {
-    if (busyId || !window.confirm(`Xóa kế hoạch “${plan.title}” và tất cả đầu việc? Thao tác này không thể hoàn tác.`)) return;
+    if (busyId || !await confirm({ title: "Xóa kế hoạch?", message: `Xóa “${plan.title}” và các đầu việc? Không thể hoàn tác.`, confirmLabel: "Xóa kế hoạch", destructive: true })) return;
     setBusyId(plan.id); setError("");
     try { await store.remove(plan.id); }
     catch (reason) { setError(reason?.message || "Chưa xóa được kế hoạch."); }
     finally { setBusyId(null); }
   }
 
-  return <div className="grid min-w-0 gap-5 sm:gap-6">
+  return <div className="grid min-w-0 gap-4 sm:gap-5">
     {(error || store.error) && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{error || store.error}</p>}
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <section className={panel}><p className="text-xs font-bold text-slate-500">Đang thực hiện</p><p className="mt-2 text-3xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400">{active}</p></section>
-      <section className={panel}><p className="text-xs font-bold text-slate-500">Đã hoàn thành</p><p className="mt-2 text-3xl font-extrabold tabular-nums">{done}</p></section>
-      <section className={panel}><p className="text-xs font-bold text-slate-500">Tổng chi phí dự kiến chưa hoàn thành</p><p className="mt-2 break-words text-2xl font-extrabold tabular-nums">{formatMoney(plannedCost)}</p></section>
-      <section className={panel}><p className="text-xs font-bold text-slate-500">Tổng chi phí đã chuẩn bị</p><p className="mt-2 break-words text-2xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400">{formatMoney(totalPrepared)}</p></section>
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+      <section className={`${panel} !p-3 sm:!p-4`}><p className="text-xs font-bold text-slate-500">Đang thực hiện</p><p className="mt-1 text-xl font-extrabold tabular-nums sm:text-2xl text-emerald-700 dark:text-emerald-400">{active}</p></section>
+      <section className={`${panel} !p-3 sm:!p-4`}><p className="text-xs font-bold text-slate-500">Đã hoàn thành</p><p className="mt-1 text-xl font-extrabold tabular-nums sm:text-2xl">{done}</p></section>
+      <section className={`${panel} !p-3 sm:!p-4`}><p className="text-xs font-bold text-slate-500">Tổng chi phí dự kiến chưa hoàn thành</p><p className="mt-1 break-words text-xl font-extrabold tabular-nums sm:text-2xl">{formatMoney(plannedCost)}</p></section>
+      <section className={`${panel} !p-3 sm:!p-4`}><p className="text-xs font-bold text-slate-500">Tổng chi phí đã chuẩn bị</p><p className="mt-1 break-words text-xl font-extrabold tabular-nums sm:text-2xl text-emerald-700 dark:text-emerald-400">{formatMoney(totalPrepared)}</p></section>
     </div>
-    <section className={panel}>
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <label className="grid min-w-0 flex-1 gap-2 text-sm font-semibold md:max-w-lg">Tìm kế hoạch
-          <input type="search" className={input} placeholder="Tên kế hoạch, nhóm, ghi chú…" value={query} onChange={(event) => setQuery(event.target.value)} />
+    <section className={`${panel} !p-3 sm:!p-4`}>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="grid min-w-[160px] flex-1 gap-1 text-xs font-semibold sm:min-w-[230px]">Tìm kế hoạch
+          <input type="search" className={`${input} !min-h-10 !text-sm`} placeholder="Tên, nhóm, ghi chú…" value={query} onChange={(event) => setQuery(event.target.value)} />
         </label>
-        <div role="group" aria-label="Lọc kế hoạch" className="grid grid-cols-3 gap-1 rounded-xl bg-[#eef5f0] p-1 dark:bg-slate-800">
+        <div role="group" aria-label="Trạng thái kế hoạch" className="flex shrink-0 items-center gap-1 rounded-xl bg-[#eef5f0] p-1 dark:bg-slate-800">
           {[["active", "Đang làm"], ["completed", "Hoàn thành"], ["all", "Tất cả"]].map(([value, label]) =>
             <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}
-              className={`min-h-10 rounded-lg px-3 text-xs font-bold transition-colors sm:text-sm ${filter === value ? "bg-white text-emerald-800 shadow-sm dark:bg-slate-700 dark:text-emerald-300" : "text-slate-500 hover:text-emerald-700 dark:text-slate-300"}`}>
-              {label}
-            </button>)}
+              className={`min-h-9 rounded-lg px-2.5 text-xs font-bold transition-colors sm:px-3 ${filter === value ? "bg-white text-emerald-800 shadow-sm dark:bg-slate-700 dark:text-emerald-300" : "text-slate-500 hover:text-emerald-700 dark:text-slate-300"}`}>{label}</button>)}
+        </div>
+        <div role="group" aria-label="Thời gian dự kiến hoàn thành" className="flex shrink-0 items-center gap-1 rounded-xl bg-[#eef5f0] p-1 dark:bg-slate-800">
+          {[["all", "Mọi kỳ"], ["month", "Theo tháng"], ["year", "Theo năm"]].map(([value, label]) =>
+            <button key={value} type="button" aria-pressed={periodScope === value} onClick={() => setPeriodScope(value)}
+              className={`min-h-9 rounded-lg px-2.5 text-xs font-bold transition-colors sm:px-3 ${periodScope === value ? "bg-white text-emerald-800 shadow-sm dark:bg-slate-700 dark:text-emerald-300" : "text-slate-500 hover:text-emerald-700 dark:text-slate-300"}`}>{label}</button>)}
         </div>
       </div>
+      {periodScope !== "all" && <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[#e5ede6] pt-3 dark:border-slate-800">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Hạn hoàn thành</span>
+        {periodScope === "month"
+          ? <MonthPicker value={periodMonth} onChange={setPeriodMonth} className="w-full sm:w-[380px]" />
+          : <YearPicker value={periodYear} onChange={setPeriodYear} className="w-full sm:w-[250px]" />}
+      </div>}
     </section>
     {store.rows.length === 0 ? <section className={`${panel} grid justify-items-center gap-3 py-12 text-center`}>
       <span className="grid size-16 place-items-center rounded-2xl bg-emerald-50 text-3xl text-emerald-700 dark:bg-emerald-950/40">✦</span>

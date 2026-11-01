@@ -1,9 +1,11 @@
 import { useState } from "react";
 import useModalDialog from "../common/useModalDialog";
+import { useConfirm } from "../common/ConfirmProvider";
 import { button, primary, input } from "../finance/ui";
 
 const makeId = () => `group_custom_${crypto.randomUUID().replace(/-/g, "").slice(0, 18)}`;
 export default function GroupManagerDialog({ groups, expense, onSave, onClose }) {
+  const confirm = useConfirm();
   const [draft, setDraft] = useState(() => groups.map((g) => ({ ...g })));
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
@@ -15,10 +17,10 @@ export default function GroupManagerDialog({ groups, expense, onSave, onClose })
     setDraft((prev) => [...prev, { id: makeId(), name }]);
     setNewName(""); setError("");
   }
-  function removeGroup(id) {
+  async function removeGroup(id) {
     const children = expense.filter((item) => item.groupId === id);
     if (children.length) { setError(`Nhóm này có ${children.length} danh mục. Hãy chuyển hoặc xóa danh mục trước.`); return; }
-    if (!window.confirm("Xóa nhóm chi tiêu đang trống này?")) return;
+    if (!await confirm({ title: "Xóa nhóm chi tiêu?", message: "Xóa nhóm trống này?", confirmLabel: "Xóa nhóm", destructive: true })) return;
     setDraft((prev) => prev.filter((item) => item.id !== id)); setError("");
   }
   async function submit(event) {

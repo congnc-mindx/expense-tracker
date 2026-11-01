@@ -63,7 +63,8 @@ test("Bấm hoàn thành chỉ bật lời chúc sau khi save thành công; có 
   assert.match(page, /await store\.save\(documentId/);
   assert.match(page, /if \(checked\) setCelebration/);
   assert.match(page, /await store\.remove\(plan\.id\)/);
-  assert.match(page, /window\.confirm\(/);
+  assert.match(page, /await confirm\(/);
+  assert.doesNotMatch(page, /window\.confirm/);
   const dialog = src("components/plans/PlanDialog.jsx");
   assert.match(dialog, /validatePlan\(/);
   assert.match(dialog, /formatVndAsThousands/);

@@ -6,6 +6,8 @@ import { button, primary, panel } from "../components/finance/ui";
 import { monthRows, totals, isActual } from "../utils/finance";
 import { useCategories } from "../context/CategoryContext";
 import { formatMoney } from "../utils/money.js";
+import { monthlyAnalytics } from "../utils/summaryAnalytics";
+import { IncomeExpenseBars, CumulativeChart, CategoryVisual, InsightStrip } from "../components/analytics/FinanceVisuals";
 
 export default function SummaryPage({
   transactions,
@@ -18,6 +20,7 @@ export default function SummaryPage({
   const { getCategoryById } = useCategories();
   const rows = monthRows(transactions, month).filter((tx) => isActual(tx));
   const { income, expense } = totals(rows);
+  const analytics = monthlyAnalytics(transactions, month);
   const categories = [...new Set(rows.map((tx) => tx.category))]
     .map((id) => ({
       ...getCategoryById(id),
@@ -47,17 +50,25 @@ export default function SummaryPage({
         >
           Theo năm
         </button>
-
+        <button
+          type="button"
+          aria-pressed={mode === "twelve"}
+          className={mode === "twelve" ? primary : button}
+          onClick={() => onModeChange("twelve")}
+        >
+          12 tháng
+        </button>
       </div>
-      {mode === "year" ? (
+      {["year", "twelve"].includes(mode) ? (
         <YearSummaryPage
           transactions={transactions.filter((tx) => tx.status !== "planned")}
           userId={userId}
           year={year}
+          view={mode === "twelve" ? "table" : "analytics"}
         />
       ) : (
         <>
-          <FinanceCards
+          <FinanceCards compact
             items={[
               { label: "Thực thu", value: income, color: "green" },
               { label: "Thực chi", value: expense, color: "red" },
@@ -72,6 +83,16 @@ export default function SummaryPage({
               },
             ]}
           />
+          <InsightStrip items={[
+            { label: "Giao dịch thực tế", value: `${analytics.count} khoản`, note: "Không gồm các khoản dự kiến" },
+            { label: "Chi tiêu so với tháng trước", value: analytics.previousExpense > 0 ? `${analytics.expense >= analytics.previousExpense ? "+" : ""}${Math.round((analytics.expense / analytics.previousExpense - 1) * 100)}%` : "Chưa có kỳ đối chiếu", note: analytics.previousExpense > 0 ? `Tháng trước: ${formatMoney(analytics.previousExpense)}` : "Cần có chi tiêu ở tháng trước" },
+            { label: "Danh mục chi nhiều nhất", value: analytics.categories.length ? getCategoryById(analytics.categories[0].id).name : "Chưa có", note: analytics.categories.length ? formatMoney(analytics.categories[0].amount) : "" },
+          ]} />
+          <div className="grid min-w-0 items-stretch gap-5 xl:grid-cols-2">
+            <IncomeExpenseBars title="Thu – chi theo tuần" subtitle="Các khoảng 7 ngày trong tháng đang chọn" rows={analytics.periods} compact />
+            <CategoryVisual title="Chi tiêu theo danh mục" categories={analytics.categories} getCategoryById={getCategoryById} />
+          </div>
+          <CumulativeChart title="Xu hướng chênh lệch cộng dồn theo ngày" rows={analytics.daily} />
           <section className={panel}>
             <h2 className="mb-5 font-bold">Chi tiết theo danh mục</h2>
             {categories.length ? (

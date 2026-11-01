@@ -19,12 +19,12 @@ export default function FinanceLayout({ page, onNavigate, month, onMonthChange, 
   const current = useMemo(() => NAV.find((item) => item[0] === page) || NAV[0], [page]);
   const hasPeriod = ["overview", "transactions", "budget", "summary"].includes(page);
   const hasAdd = ["overview", "transactions", "summary", "social", "plans"].includes(page);
-  const showYear = page === "summary" && summaryMode === "year";
+  const showYear = page === "summary" && ["year", "twelve"].includes(summaryMode);
   const navigation = <nav className="grid gap-1.5">{NAV.map(([id, label, _, icon]) => <button key={id} type="button" onClick={() => { onNavigate(id); setMenuOpen(false); }}
       className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-emerald-600 ${page === id ? "bg-emerald-600 text-white shadow-sm shadow-emerald-800/10" : "text-[#45624c] hover:bg-[#e8f4eb] dark:text-slate-300 dark:hover:bg-slate-800"}`}>
       <span aria-hidden="true" className="w-5 shrink-0 text-center text-xl">{icon}</span><span className="truncate">{label}</span>
     </button>)}</nav>;
-  return <div className={`${dark ? "dark" : ""} min-h-dvh overflow-x-clip bg-[#f4f8f5] font-sans text-[#263d2f] scheme-light dark:bg-slate-950 dark:text-slate-100 dark:scheme-dark`}>
+  return <div data-zwhis-theme={dark ? "dark" : "light"} className={`${dark ? "dark" : ""} min-h-dvh overflow-x-clip bg-[#f4f8f5] font-sans text-[#263d2f] scheme-light dark:bg-slate-950 dark:text-slate-100 dark:scheme-dark`}>
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col overflow-y-auto border-r border-[#dce9df] bg-white p-5 dark:border-slate-800 dark:bg-slate-900 lg:flex">
       <div className="mb-8 flex items-center gap-3 px-2 pt-3"><BrandMark className="size-11" /><div><p className="text-xl font-extrabold text-[#285e3b] dark:text-slate-100">zWhisFlow</p><p className="text-xs text-slate-500 dark:text-slate-400">Tài chính cá nhân</p></div></div>
       {navigation}

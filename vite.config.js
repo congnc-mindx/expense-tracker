@@ -5,6 +5,9 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: "/expense-tracker/",
+  server: {
+    open: true, // Tự động mở trình duyệt mặc định khi chạy lệnh dev
+  },
 
   // Force Firebase App, Auth and Firestore to share one module instance.
   // A duplicate @firebase/app instance can cause:

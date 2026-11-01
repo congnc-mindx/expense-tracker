@@ -40,7 +40,8 @@ test("Ngân sách chỉnh sửa theo từng hạn mức, có xác nhận xóa", 
   const editor = read("src/components/budget/BudgetLimitDialog.jsx");
   assert.match(page, /Xóa hạn mức/);
   assert.match(page, /Xóa toàn bộ hạn mức/);
-  assert.match(page, /window.confirm/);
+  assert.match(page, /await confirm\(/);
+  assert.doesNotMatch(page, /window\.confirm/);
   assert.match(page, /BudgetLimitDialog/);
   assert.match(editor, /Lưu hạn mức/);
 });

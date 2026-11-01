@@ -21,6 +21,11 @@ import { CategoryProvider } from "./context/CategoryContext";
 import { socialToTransaction } from "./utils/socialAccounting";
 import { clampYear } from "./utils/dateLimits";
 import { categoryIdsInBudgets } from "./utils/budgetEdits";
+import { resolveMonthlyBudget } from "./utils/budgetInheritance";
+import {
+  ConfirmProvider,
+  useConfirm,
+} from "./components/common/ConfirmProvider";
 import {
   recurringForMonth,
   recurringTransactionId,
@@ -29,7 +34,6 @@ import {
 } from "./utils/recurringExpenses";
 import { localDate as todayDate } from "./utils/finance";
 
-const EMPTY_BUDGET = { total: 0, categories: {} };
 function validBudget(budget) {
   return (
     budget &&
@@ -43,7 +47,8 @@ function validBudget(budget) {
     )
   );
 }
-export default function App({ user, onSignOut, signingOut, logoutError }) {
+function FinanceApp({ user, onSignOut, signingOut, logoutError }) {
+  const confirm = useConfirm();
   const [page, setPage] = useState("overview");
   const [transactionType, setTransactionType] = useState("expense");
   // Compatibility: dashboard shortcuts still navigate using old page IDs.
@@ -126,7 +131,11 @@ export default function App({ user, onSignOut, signingOut, logoutError }) {
     await preferences.save("categories", { ...clean, updatedAt: Date.now() });
   }
   const budgetStore = useCloudCollection(user.uid, "budgets");
-  const budget = budgetStore.rows.find((b) => b.id === month) || EMPTY_BUDGET;
+  const resolvedBudget = useMemo(
+    () => resolveMonthlyBudget(budgetStore.rows, month),
+    [budgetStore.rows, month],
+  );
+  const budget = resolvedBudget.budget;
   const budgetError =
     budgetStore.error ||
     (!validBudget(budget) ? "Dữ liệu ngân sách tháng không hợp lệ." : "");
@@ -210,9 +219,12 @@ export default function App({ user, onSignOut, signingOut, logoutError }) {
   }
   async function deleteRecurringRule(rule) {
     if (
-      !window.confirm(
-        `Xóa lịch “${rule.title}”? Giao dịch đã ghi nhận vẫn được giữ.`,
-      )
+      !(await confirm({
+        title: "Xóa lịch định kỳ?",
+        message: `Xóa lịch “${rule.title}”? Giao dịch đã ghi nhận vẫn giữ.`,
+        confirmLabel: "Xóa lịch",
+        destructive: true,
+      }))
     )
       return;
     await persistRecurring((current) =>
@@ -376,6 +388,8 @@ export default function App({ user, onSignOut, signingOut, logoutError }) {
               <BudgetPage
                 key={month}
                 budget={budget}
+                sourceMonth={resolvedBudget.sourceMonth}
+                inherited={resolvedBudget.inherited}
                 rows={rows}
                 onSave={saveBudget}
               />
@@ -408,5 +422,13 @@ export default function App({ user, onSignOut, signingOut, logoutError }) {
         )}
       </FinanceLayout>
     </CategoryProvider>
+  );
+}
+
+export default function App(props) {
+  return (
+    <ConfirmProvider>
+      <FinanceApp {...props} />
+    </ConfirmProvider>
   );
 }

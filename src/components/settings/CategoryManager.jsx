@@ -7,10 +7,12 @@ import GroupManagerDialog from "./GroupManagerDialog";
 import { panel, button, input, muted, primary } from "../finance/ui";
 import { validateCategoryConfig } from "../../utils/categoryConfig";
 import { normalize } from "../../utils/finance";
+import { useConfirm } from "../common/ConfirmProvider";
 
 const makeId = (type) => `${type}_custom_${crypto.randomUUID().replace(/-/g, "").slice(0, 18)}`;
 
 export default function CategoryManager({ initial, onSave, usedCategoryIds = [] }) {
+  const confirm = useConfirm();
   const [config, setConfig] = useState(() => structuredClone(initial));
   const [type, setType] = useState("expense");
   const [query, setQuery] = useState("");
@@ -83,7 +85,7 @@ export default function CategoryManager({ initial, onSave, usedCategoryIds = [] 
       setError(`Danh mục “${cat.name}” đã được sử dụng trong giao dịch hoặc ngân sách. Hãy Ẩn để bảo vệ dữ liệu cũ.`);
       return;
     }
-    if (!window.confirm(`Xóa danh mục “${cat.name}”? Thao tác này không thể hoàn tác.`)) return;
+    if (!await confirm({ title: "Xóa danh mục?", message: `Xóa danh mục “${cat.name}”? Không thể hoàn tác.`, confirmLabel: "Xóa danh mục", destructive: true })) return;
     const next = structuredClone(config);
     next[type] = next[type].filter((item) => item.id !== id);
     try { await persist(next, "Đã xóa danh mục chưa sử dụng."); }

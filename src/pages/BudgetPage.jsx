@@ -6,9 +6,11 @@ import { panel, primary, button, muted } from "../components/finance/ui";
 import { isActual } from "../utils/finance";
 import { formatMoney } from "../utils/money";
 import { budgetWithLimit } from "../utils/budgetEdits";
+import { useConfirm } from "../components/common/ConfirmProvider";
 
-export default function BudgetPage({ budget, rows, onSave }) {
+export default function BudgetPage({ budget, rows, onSave, inherited = false, sourceMonth = null }) {
   const { expense, getCategoryById } = useCategories();
+  const confirm = useConfirm();
   const [editor, setEditor] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -46,13 +48,13 @@ export default function BudgetPage({ budget, rows, onSave }) {
   }
 
   async function clear(categoryId) {
-    if (!window.confirm(`Xóa hạn mức của “${getCategoryById(categoryId).name}”? Giao dịch cũ không bị ảnh hưởng.`)) return;
+    if (!await confirm({ title: "Xóa hạn mức danh mục?", message: `Xóa hạn mức “${getCategoryById(categoryId).name}” từ tháng này? Các tháng trước vẫn giữ nguyên.`, confirmLabel: "Xóa hạn mức", destructive: true })) return;
     try { await commit({ categoryId, amount: 0 }); }
     catch (reason) { setError(reason?.message || "Không thể xóa hạn mức."); }
   }
 
   async function clearAll() {
-    if (!window.confirm("Xóa toàn bộ hạn mức tháng này? Tất cả giao dịch vẫn được giữ nguyên.")) return;
+    if (!await confirm({ title: "Đặt ngân sách về 0?", message: "Đặt tất cả hạn mức về 0 từ tháng này? Các tháng trước và giao dịch không đổi.", confirmLabel: "Xóa hạn mức", destructive: true })) return;
     setBusy(true); setError(""); setMessage("");
     try { await onSave({ total: 0, categories: {} }); setMessage("Đã xóa toàn bộ hạn mức tháng này."); }
     catch (reason) { setError(reason?.message || "Không thể xóa ngân sách."); }
@@ -65,7 +67,7 @@ export default function BudgetPage({ budget, rows, onSave }) {
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Hạn mức tháng đang chọn</p>
           <p className="mt-1 break-words text-2xl font-extrabold tracking-tight tabular-nums sm:text-3xl">{total > 0 ? formatMoney(total) : "Chưa đặt ngân sách"}</p>
-          <p className={`mt-2 ${muted}`}>Số chi thực tế được cập nhật tự động từ Thu/Chi và Sổ mừng.</p>
+          <p className={`mt-2 ${muted}`}>Số chi thực tế tự cập nhật từ Thu chi và Sổ mừng. {inherited && sourceMonth ? `Đang kế thừa mức của tháng ${Number(sourceMonth.slice(5))}/${sourceMonth.slice(0, 4)}; chỉnh tại đây sẽ áp dụng từ tháng này về sau.` : "Thay đổi mức sẽ không tác động ngược đến tháng trước."}</p>
         </div>
         <button type="button" className={primary} disabled={busy} onClick={() => setEditor({ mode: "total" })}>
           {total > 0 ? "Sửa ngân sách" : "+ Đặt ngân sách"}

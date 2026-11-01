@@ -24,7 +24,7 @@ test("Form thu chi và sổ mừng cùng dùng hook đóng modal khi chạm back
 test("Chọn tháng dùng chung một component cho thanh điều hướng và tổng kết", () => {
   const layout = read("src/components/finance/FinanceLayout.jsx");
   assert.match(layout, /<MonthPicker/);
-  assert.match(layout, /summaryMode === "year"/);
+  assert.match(layout, /\["year", "twelve"\]\.includes\(summaryMode\)/);
   assert.match(layout, /page === "social"/);
   assert.doesNotMatch(layout, /type="month"/);
   assert.doesNotMatch(read("src/pages/SummaryPage.jsx"), /type="month"/);
