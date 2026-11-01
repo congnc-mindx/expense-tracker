@@ -1,9 +1,10 @@
 import TransactionsPage from "../../pages/TransactionsPage";
 import { button, primary, muted } from "./ui";
 import RecurringManager from "../recurring/RecurringManager";
+import MindxIncomePanel from "../settings/MindxIncomePanel";
 
 /** One destination for both income and expense, using the existing ledger CRUD. */
-export default function TransactionsWorkspace({ type, onTypeChange, month, rows, onEdit, onDelete, onSocialNavigate, recurringRules = [], recurringActions, onRecurringPayment, onCreateRecurring }) {
+export default function TransactionsWorkspace({ type, onTypeChange, month, rows, onEdit, onDelete, onSocialNavigate, recurringRules = [], recurringActions, onRecurringPayment, onCreateRecurring, mindx, uid, transactions = [], incomeCategoryId = "mindx" }) {
   return (
     <div className="grid min-w-0 gap-5 sm:gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -28,8 +29,11 @@ export default function TransactionsWorkspace({ type, onTypeChange, month, rows,
         {type === "recurring" ? <RecurringManager month={month} rules={recurringRules} onSave={recurringActions.save}
           onRemove={recurringActions.remove} onToggle={recurringActions.toggle} onCreate={onCreateRecurring}
           busy={recurringActions.busy} error={recurringActions.error} />
-          : <TransactionsPage key={`${type}:${month}`} type={type} rows={rows} onEdit={onEdit}
-            onDelete={onDelete} onSocialNavigate={onSocialNavigate} onRecurringPayment={onRecurringPayment} />}
+          : <div className="grid gap-4">
+            {type === "income" && mindx && <MindxIncomePanel compact mindx={mindx} uid={uid} period={month} transactions={transactions} categoryId={incomeCategoryId} />}
+            <TransactionsPage key={`${type}:${month}`} type={type} rows={rows} onEdit={onEdit}
+              onDelete={onDelete} onSocialNavigate={onSocialNavigate} onRecurringPayment={onRecurringPayment} />
+          </div>}
       </div>
     </div>
   );
