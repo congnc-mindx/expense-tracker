@@ -26,7 +26,7 @@ test("Nhập theo nghìn nhưng giá trị trình bày luôn đủ đơn vị VN
   assert.equal(formatVndAsThousands(1_000_000), "1.000");
   const table = read("components/social/SocialPeopleTable.jsx");
   assert.match(table, /formatMoney\(summary\.total\)/);
-  assert.match(table, /formatMoney\(item\.amount\)/);
+  assert.match(read("components/social/OverflowOccasions.jsx"), /formatMoney\(item\.amount\)/);
   assert.doesNotMatch(table, /formatThousands\(/);
   assert.doesNotMatch(table, /Đơn vị: 1\.000 đồng/);
 });

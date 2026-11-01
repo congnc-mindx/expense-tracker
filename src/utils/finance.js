@@ -7,16 +7,16 @@ export function validDate(value) {
     return false;
   const [y, m, d] = value.split("-").map(Number);
   return (
-    y >= MIN_YEAR &&
-    y <= MAX_YEAR &&
-    m >= 1 &&
-    m <= 12 &&
-    d >= 1 &&
-    d <= new Date(y, m, 0).getDate()
+    y >= MIN_YEAR && y <= MAX_YEAR && m >= 1 && m <= 12 && d >= 1 && d <= new Date(y, m, 0).getDate()
   );
 }
 export function isActual(tx, today = localDate()) {
-  return validDate(tx.date) && tx.date <= today && tx.status !== "planned";
+  if (!validDate(tx.date)) return false;
+  // Expense commitments are accrued at the start of their budget MONTH.
+  // Future months do not count; received social gifts keep date-level precision.
+  if (tx.type === "expense" && tx.origin !== "social")
+    return tx.date.slice(0, 7) <= today.slice(0, 7);
+  return tx.date <= today && tx.status !== "planned";
 }
 export function monthRows(transactions, month) {
   return transactions.filter((tx) => tx.date?.startsWith(`${month}-`));

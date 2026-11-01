@@ -1,103 +1,25 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useYearPlan from "../hooks/useYearPlan";
 import { buildYearSummary } from "../utils/yearSummary";
 import { formatMoney } from "../utils/money.js";
-import { formatVndAsThousands, parseThousandsToVnd, sanitizeThousandsInput } from "../utils/moneyInput.js";
 import FinanceCards from "../components/finance/FinanceCards";
-import { input, button, primary } from "../components/finance/ui";
+import { button } from "../components/finance/ui";
+import YearGoalsDialog from "../components/finance/YearGoalsDialog";
 import { useCategories } from "../context/CategoryContext";
 import { yearlyAnalytics } from "../utils/summaryAnalytics";
 import { IncomeExpenseBars, CumulativeChart, CategoryVisual, InsightStrip } from "../components/analytics/FinanceVisuals";
 
-function MonthForm({ row, onSave, onClose }) {
-  const [target, setTarget] = useState(
-    row.target === null ? "" : formatVndAsThousands(row.target),
-  );
-  const [savings, setSavings] = useState(formatVndAsThousands(row.savings));
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const submit = async (event) => {
-    event.preventDefault();
-    const values = {
-      target: target === "" ? null : parseThousandsToVnd(target, { allowZero: true }),
-      savings: savings === "" ? 0 : parseThousandsToVnd(savings, { allowZero: true }),
-    };
-    if (
-      ![values.target, values.savings].every(
-        (value) =>
-          value === null || (Number.isSafeInteger(value) && value >= 0),
-      )
-    ) {
-      setError("Nhập tiền hợp lệ theo nghìn đồng. VD: 355 = 355.000 đ.");
-      return;
-    }
-    setSaving(true);
-    try { await onSave(row.month, values); onClose(); }
-    catch (reason) { setError(reason.message || "Chưa lưu được. Nội dung đang nhập được giữ nguyên."); }
-    finally { setSaving(false); }
-  };
-  return (
-    <form
-      onSubmit={submit}
-      className="grid gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900 dark:bg-slate-900"
-    >
-      <h3 className="m-0 font-bold">Chỉnh tháng {row.month}</h3>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm">
-          Mục tiêu thu nhập (nghìn đồng)
-          <input
-            type="text"
-            inputMode="decimal"
-            value={target}
-            onChange={(e) => setTarget(sanitizeThousandsInput(e.target.value))}
-            placeholder="VD: 10.000"
-            className={input}
-          />
-        </label>
-        <label className="grid gap-2 text-sm">
-          Tiền đã để riêng tiết kiệm (nghìn đồng)
-          <input
-            type="text"
-            inputMode="decimal"
-            value={savings}
-            onChange={(e) => setSavings(sanitizeThousandsInput(e.target.value))}
-            disabled={row.future}
-            className={input}
-          />
-        </label>
-      </div>
-      <p className="m-0 text-xs text-slate-600 dark:text-slate-400">
-        Để trống mục tiêu nếu chưa đặt. Tiết kiệm là số ghi nhận riêng, không tự
-        trừ thêm vào chi tiêu hoặc số dư.
-      </p>
-      {error && (
-        <p role="alert" className="m-0 text-sm text-red-700 dark:text-rose-400">
-          {error}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className={primary}
-        >
-          {saving ? "Đang lưu…" : `Lưu tháng ${row.month}`}
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className={button}
-        >
-          Hủy
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function YearContent({ transactions, userId, year, view }) {
-  const { plan, error, loading, saveMonth } = useYearPlan(userId, year);
+function YearContent({ transactions, userId, year, view, goalAddSignal = 0 }) {
+  const { plan, error, loading, saveGoals } = useYearPlan(userId, year);
   const [editing, setEditing] = useState(null);
+  const previousAddSignal = useRef(goalAddSignal);
+  useEffect(() => {
+    if (goalAddSignal !== previousAddSignal.current && view === "table") {
+      const now = new Date();
+      setEditing(year === now.getFullYear() ? now.getMonth() + 1 : 1);
+    }
+    previousAddSignal.current = goalAddSignal;
+  }, [goalAddSignal, view, year]);
   const summary = buildYearSummary(transactions, year, plan);
   const analytics = yearlyAnalytics(transactions, year);
   const { getCategoryById } = useCategories();
@@ -146,15 +68,24 @@ function YearContent({ transactions, userId, year, view }) {
       </p>
       </>}
       {view === "table" && <>
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-900">
-        <span className="font-bold">Chi tiết 12 tháng năm {year}</span>
-        <span className="text-slate-500 dark:text-slate-400">Chọn Chỉnh để cập nhật mục tiêu và tiết kiệm từng tháng</span>
+      <FinanceCards compact columns={5} items={[
+        { label: "Mục tiêu thu nhập", value: summary.target, color: "blue" },
+        { label: "Thực thu", value: summary.income, color: "green" },
+        { label: "Chi tiêu", value: summary.expense, color: "red" },
+        { label: "Mục tiêu tiết kiệm", value: summary.savingsTarget, color: "amber" },
+        { label: "Đã tiết kiệm", value: summary.savings, color: "green" },
+      ]}/>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+        <div><p className="font-bold">Bảng chi tiết 12 tháng · {year}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Chênh lệch cả năm: <strong className={summary.balance < 0 ? "text-rose-600" : "text-emerald-600"}>{formatMoney(summary.balance)}</strong></p></div>
+        <span className="text-xs text-slate-500 dark:text-slate-400">Chọn Sửa để cập nhật mục tiêu của tháng.</span>
       </div>
       {editing !== null && !loading && !error && (
-        <MonthForm
-          key={editing}
-          row={summary.rows[editing - 1]}
-          onSave={saveMonth}
+        <YearGoalsDialog
+          key={`${year}-${editing}`}
+          year={year}
+          rows={summary.rows}
+          initialMonth={editing}
+          onSave={saveGoals}
           onClose={() => setEditing(null)}
         />
       )}
@@ -170,7 +101,8 @@ function YearContent({ transactions, userId, year, view }) {
                 "Dự tính thu",
                 "Thực thu",
                 "Chi tiêu",
-                "Tiết kiệm",
+                "Mục tiêu TK",
+                "Đã tiết kiệm",
                 "Chênh lệch",
                 "Tiến độ",
                 "",
@@ -206,9 +138,8 @@ function YearContent({ transactions, userId, year, view }) {
                 <td className="px-4 py-4 whitespace-nowrap">
                   {row.future ? "—" : formatMoney(row.expense)}
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
-                  {row.future ? "—" : formatMoney(row.savings)}
-                </td>
+                <td className="px-4 py-4 whitespace-nowrap">{row.savingsTarget === null ? "—" : formatMoney(row.savingsTarget)}</td>
+                <td className="px-4 py-4 whitespace-nowrap">{row.future ? "—" : formatMoney(row.savings)}</td>
                 <td
                   className={`px-4 py-4 whitespace-nowrap ${row.balance < 0 ? "text-red-700 dark:text-rose-400" : ""}`}
                 >
@@ -235,24 +166,6 @@ function YearContent({ transactions, userId, year, view }) {
               </tr>
             ))}
           </tbody>
-          <tfoot className="border-t border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 font-bold">
-            <tr>
-              {[
-                "Tổng",
-                formatMoney(summary.target),
-                formatMoney(summary.income),
-                formatMoney(summary.expense),
-                formatMoney(summary.savings),
-                formatMoney(summary.balance),
-                `${summary.reached} tháng đạt`,
-                "",
-              ].map((value, i) => (
-                <td key={i} className="px-4 py-4 whitespace-nowrap">
-                  {value}
-                </td>
-              ))}
-            </tr>
-          </tfoot>
         </table>
       </div>
       <p className="m-0 text-xs leading-5 text-slate-500 dark:text-slate-400">
@@ -270,6 +183,7 @@ export default function YearSummaryPage({
   userId,
   year = new Date().getFullYear(),
   view = "analytics",
+  goalAddSignal = 0,
 }) {
   return (
     <section className="grid min-w-0 gap-6 text-slate-800 dark:text-slate-200">
@@ -279,6 +193,7 @@ export default function YearSummaryPage({
         userId={userId}
         year={year}
         view={view}
+        goalAddSignal={goalAddSignal}
       />
     </section>
   );

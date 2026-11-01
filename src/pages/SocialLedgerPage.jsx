@@ -30,7 +30,7 @@ export default function SocialLedgerPage({ store, addSignal = 0 }) {
     () => filterSocialPeople(people, { search, group: groupFilter, occasion: occasionFilter }),
     [people, search, groupFilter, occasionFilter],
   );
-  const paging = useIncrementalList(filtered, [search,groupFilter,occasionFilter], 10);
+  const paging = useIncrementalList(filtered, [search,groupFilter,occasionFilter], 10, 5);
   const visibleEntryCount = filtered.reduce((total, person) =>
     total + person.entries.filter((entry) => !occasionFilter || entry.occasion === occasionFilter).length, 0,
   );

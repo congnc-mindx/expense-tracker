@@ -11,7 +11,7 @@ const NAV = [
   ["summary", "Tổng kết", "Đối chiếu thu chi theo tháng hoặc năm", "▤"],
   ["plans", "Kế hoạch", "Mục tiêu chi tiêu và việc cần chuẩn bị", "✦"],
   ["social", "Sổ mừng & thăm hỏi", "Các khoản mừng, phúng viếng, thăm hỏi", "♡"],
-  ["settings", "Cài đặt", "Danh mục, sao lưu và giao diện", "⚙"],
+  ["settings", "Cài đặt", "Danh mục, sao lưu và kết nối", "⚙"],
 ];
 
 export default function FinanceLayout({ page, onNavigate, month, onMonthChange, dark, onThemeChange, summaryMode, summaryYear, onSummaryYearChange, onAdd, addLabel, onSignOut, signingOut, logoutError, user, children }) {

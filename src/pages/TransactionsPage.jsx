@@ -53,13 +53,6 @@ export default function TransactionsPage({ type, rows, onEdit, onDelete, onSocia
           { label: "Số khoản trong tháng", value: `${all.length} khoản` },
         ]}
       />
-      {type === "income" && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-          <strong>MindX · Chưa kết nối tự động.</strong> Bạn có thể ghi nguồn
-          thu “MindX” thủ công. Chỉ khoản đã nhận và đã đến ngày mới tính vào
-          thực thu.
-        </div>
-      )}
       <section className={panel}>
         <div className="mb-5 grid gap-3 md:grid-cols-[2fr_1fr_1fr]">
           <label className={`grid gap-2 ${muted}`}>

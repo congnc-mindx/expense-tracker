@@ -37,18 +37,29 @@ export function validateRecurringRule(data, config) {
 /** Keep the previous API working for tests and any external modules. */
 export const validateRecurringExpense = validateRecurringRule;
 
-/** Virtual expected rows; only one record per rule/month and never an actual transaction. */
+/** Historical revisions keep past months stable when a recurring rule is edited,
+ * paused or removed. Old rules without history remain fully compatible.
+ */
+export function recurringSegments(rule) {
+  return [...(Array.isArray(rule.history) ? rule.history : []), rule];
+}
+function ruleForPeriod(rule, month) {
+  return recurringSegments(rule).find((segment) =>
+    segment.active !== false && segment.startMonth <= month &&
+    (!segment.endMonth || segment.endMonth >= month));
+}
 export function recurringForMonth(rules, month, transactions) {
   if (!validMonth(month)) return [];
   const ids = new Set(transactions.map((tx) => tx.id));
-  return rules.filter((rule) => rule.active && rule.startMonth <= month && (!rule.endMonth || rule.endMonth >= month))
-    .flatMap((rule) => {
-      const date = recurringDate(month, rule.day);
-      const id = recurringTransactionId(rule.id, month);
-      if (!validDate(date) || ids.has(id)) return [];
-      return [{ id, type: recurringType(rule), origin: "recurring", virtual: true, recurringId: rule.id,
-        recurringMonth: month, category: rule.category, amount: rule.amount, date, status: "planned",
-        note: rule.note || rule.title, title: rule.title }];
-    });
+  return rules.flatMap((rule) => {
+    const segment = ruleForPeriod(rule, month);
+    if (!segment) return [];
+    const date = recurringDate(month, segment.day);
+    const id = recurringTransactionId(rule.id, month);
+    if (!validDate(date) || ids.has(id)) return [];
+    return [{ id, type: recurringType(segment), origin: "recurring", virtual: true, recurringId: rule.id,
+      recurringMonth: month, category: segment.category, amount: segment.amount, date, status: "planned",
+      note: segment.note || segment.title, title: segment.title }];
+  });
 }
 export const monthlyExpenseCount = (rules) => rules.filter((rule) => rule.active && recurringType(rule) === "expense").length;

@@ -22,11 +22,11 @@ test("cộng các lần gửi / nhận theo một người, không phân biệt 
   assert.equal(people[0].received,200000);
   assert.equal(people[0].cells.given_wedding,300000);
 });
-test("thu chi loại bỏ các giao dịch dự kiến", () => {
+test("khoản chi dự kiến tự tính vào tháng đến hạn", () => {
   const tx=[{type:"income",amount:8000000,date:"2026-10-15",status:"actual"},{type:"expense",amount:500000,date:"2026-10-16",status:"actual"},{type:"expense",amount:1000000,date:"2026-10-17",status:"planned"}];
-  assert.deepEqual(totals(tx),{income:8000000,expense:500000});
+  assert.deepEqual(totals(tx),{income:8000000,expense:1500000});
   const summary=buildYearSummary(tx,2026,createYearPlan(),new Date(2026,9,30));
-  assert.equal(summary.income,8000000);assert.equal(summary.expense,500000);
+  assert.equal(summary.income,8000000);assert.equal(summary.expense,1500000);
 });
 
 test("không gộp nhầm hai người cùng tên ở hai nhóm", () => {

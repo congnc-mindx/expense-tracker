@@ -16,6 +16,7 @@ export default function SummaryPage({
   mode,
   onModeChange,
   year,
+  goalAddSignal = 0,
 }) {
   const { getCategoryById } = useCategories();
   const rows = monthRows(transactions, month).filter((tx) => isActual(tx));
@@ -61,10 +62,11 @@ export default function SummaryPage({
       </div>
       {["year", "twelve"].includes(mode) ? (
         <YearSummaryPage
-          transactions={transactions.filter((tx) => tx.status !== "planned")}
+          transactions={transactions.filter((tx) => isActual(tx))}
           userId={userId}
           year={year}
           view={mode === "twelve" ? "table" : "analytics"}
+          goalAddSignal={goalAddSignal}
         />
       ) : (
         <>

@@ -49,6 +49,7 @@ test("Các ví dụ placeholder đã được thống nhất và thay tên mẫu
 test("Không còn tính năng nhập localStorage cũ; vẫn hỗ trợ sao lưu Firebase", () => {
   const settings = read("src/pages/SettingsPage.jsx");
   assert.doesNotMatch(settings, /Kiểm tra localStorage cũ|Phục hồi từ sao lưu|importBackup/);
-  assert.match(settings, /exportBackup/);
+  assert.match(settings, /DataBackupPanel/);
+  assert.match(read("src/components/settings/DataBackupPanel.jsx"), /exportBackup/);
   assert.match(read("src/pages/SocialLedgerPage.jsx"), /SocialPeopleTable/);
 });

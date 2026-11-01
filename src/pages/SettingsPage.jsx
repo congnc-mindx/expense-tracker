@@ -1,53 +1,35 @@
 import { useState } from "react";
+import { localDate } from "../utils/finance";
 import CategoryManager from "../components/settings/CategoryManager";
 import MindxIncomePanel from "../components/settings/MindxIncomePanel";
-import { panel, button, muted, primary } from "../components/finance/ui";
-import { localDate } from "../utils/finance";
-import { exportBackup, downloadJson } from "../firebase/backup";
-import { downloadAnnualWorkbook } from "../utils/annualExcel";
+import DataBackupPanel from "../components/settings/DataBackupPanel";
 
-export default function SettingsPage({ user, dark, onThemeChange, categoryConfig, onSaveCategories, usedCategoryIds = [], mindx, transactions = [] }) {
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [year, setYear] = useState(new Date().getFullYear());
-  async function backup(asExcel) {
-    setBusy(true); setError(""); setMessage("");
-    try {
-      const data = await exportBackup(user.uid);
-      if (asExcel) {
-        downloadAnnualWorkbook(data, year, mindx?.rows || []);
-        setMessage(`Đã tạo file Excel năm ${year}.`);
-      } else {
-        downloadJson(data, `zwhisflow-${localDate()}.json`);
-        setMessage("Đã tạo bản sao lưu JSON đầy đủ từ Firebase.");
-      }
-    } catch (reason) {
-      setError(reason?.message || "Không thể xuất dữ liệu.");
-    } finally { setBusy(false); }
-  }
-  const currentPeriod = localDate().slice(0, 7);
-  return <div className="grid gap-6">
-    <section className={panel}>
-      <h2 className="text-lg font-bold">Sao lưu & xuất dữ liệu</h2>
-      <p className={`mt-2 ${muted}`}>Excel để lưu và phân tích theo năm; JSON để lưu toàn bộ dữ liệu gốc có thể phục hồi trong tương lai.</p>
-      <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-sm font-semibold">Năm xuất Excel
-          <select value={year} onChange={(event) => setYear(Number(event.target.value))} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 dark:border-slate-700 dark:bg-slate-950">
-            {Array.from({ length: 69 }, (_, i) => i + 2023).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-        </label>
-        <button type="button" className={primary} disabled={busy} onClick={() => backup(true)}>{busy ? "Đang xuất…" : `↓ Xuất Excel ${year}`}</button>
-        <button type="button" className={button} disabled={busy} onClick={() => backup(false)}>↓ Sao lưu JSON đầy đủ</button>
+const sections = [
+  { id: "categories", label: "Danh mục", description: "Thêm, sửa và quản lý phân loại thu chi" },
+  { id: "backup", label: "Sao lưu & dữ liệu", description: "Xuất Excel, sao lưu và khôi phục JSON" },
+  { id: "integrations", label: "Kết nối mindX", description: "Tài khoản và nguồn lương đồng bộ" },
+];
+
+export default function SettingsPage({ user, categoryConfig, onSaveCategories, usedCategoryIds = [], mindx, transactions = [] }) {
+  const [section, setSection] = useState("categories");
+  const active = sections.find((item) => item.id === section);
+  return (
+    <div className="grid min-w-0 gap-5">
+      <nav aria-label="Các mục cài đặt" className="grid min-w-0 gap-2 rounded-2xl border border-[#dce9df] bg-white p-2 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-3">
+        {sections.filter((item) => item.id !== "integrations" || mindx).map((item) => (
+          <button key={item.id} type="button" aria-current={section === item.id ? "page" : undefined}
+            className={`min-w-0 rounded-xl px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 ${section === item.id ? "bg-emerald-600 text-white shadow-sm" : "text-slate-700 hover:bg-emerald-50 dark:text-slate-200 dark:hover:bg-slate-800"}`}
+            onClick={() => setSection(item.id)}>
+            <span className="block text-sm font-bold">{item.label}</span>
+            <span className={`mt-0.5 block text-xs ${section === item.id ? "text-emerald-50" : "text-slate-500 dark:text-slate-400"}`}>{item.description}</span>
+          </button>
+        ))}
+      </nav>
+      <div role="region" aria-label={active?.label} className="min-w-0">
+        {section === "categories" && <CategoryManager key={user.uid} initial={categoryConfig} onSave={onSaveCategories} usedCategoryIds={usedCategoryIds} />}
+        {section === "backup" && <DataBackupPanel user={user} mindx={mindx} />}
+        {section === "integrations" && mindx && <MindxIncomePanel connectionOnly mindx={mindx} uid={user.uid} period={localDate().slice(0, 7)} transactions={transactions} />}
       </div>
-      <p className={`mt-3 text-xs ${muted}`}>Excel gồm tổng hợp, giao dịch, Sổ mừng, ngân sách, kế hoạch, mục tiêu và bảng lương mindX (nếu đã kết nối). Số tiền là VND đầy đủ.</p>
-    </section>
-    {mindx && <MindxIncomePanel mindx={mindx} uid={user.uid} period={currentPeriod} transactions={transactions} categoryId={categoryConfig.income.find((item) => item.id === "mindx")?.id || "salary"} />}
-    <CategoryManager initial={categoryConfig} onSave={onSaveCategories} usedCategoryIds={usedCategoryIds}/>
-    <section className={panel}><h2 className="font-bold">Tài khoản & giao diện</h2><p className={`mt-3 break-all ${muted}`}>{user.email}</p><p className={`mt-1 text-xs ${muted}`}>UID: {user.uid}</p>
-      <button type="button" className={`mt-4 ${button}`} onClick={onThemeChange}>Chuyển sang giao diện {dark ? "sáng" : "tối"}</button>
-    </section>
-    {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-300">{error}</p>}
-    {message && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{message}</p>}
-  </div>;
+    </div>
+  );
 }

@@ -1,5 +1,6 @@
+import { isActual } from "./finance.js";
 export function createYearPlan() {
-  return Array.from({ length: 12 }, () => ({ target: null, savings: 0 }));
+  return Array.from({ length: 12 }, () => ({ target: null, savings: 0, savingsTarget: null }));
 }
 
 export function isYearPlan(value) {
@@ -11,7 +12,8 @@ export function isYearPlan(value) {
       (item) =>
         item &&
         (item.target === null || money(item.target)) &&
-        money(item.savings),
+        money(item.savings) &&
+        (item.savingsTarget === undefined || item.savingsTarget === null || money(item.savingsTarget)),
     )
   );
 }
@@ -21,6 +23,7 @@ export function buildYearSummary(transactions, year, plan, now = new Date()) {
   const rows = plan.map((item, index) => ({
     month: index + 1,
     target: item.target,
+    savingsTarget: item.savingsTarget ?? null,
     savings: item.savings,
     income: 0,
     expense: 0,
@@ -31,10 +34,7 @@ export function buildYearSummary(transactions, year, plan, now = new Date()) {
   for (const tx of transactions) {
     if (
       !tx ||
-      tx.status === "planned" ||
-      typeof tx.date !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(tx.date) ||
-      tx.date > today
+      !isActual(tx, today)
     )
       continue;
     const [y, m, d] = tx.date.split("-").map(Number);
@@ -72,6 +72,7 @@ export function buildYearSummary(transactions, year, plan, now = new Date()) {
   return {
     rows,
     target: sum("target"),
+    savingsTarget: sum("savingsTarget"),
     income: sum("income"),
     expense: sum("expense"),
     savings: rows

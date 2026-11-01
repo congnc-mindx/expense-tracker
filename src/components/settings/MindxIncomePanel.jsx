@@ -5,7 +5,7 @@ import { localDate } from "../../utils/finance";
 import { mindxIncomeRow, mindxPaymentId } from "../../integrations/mindx/periods";
 import { recordSalaryPayment } from "../../integrations/mindx/recordSalaryPayment";
 
-export default function MindxIncomePanel({ mindx, uid, period, transactions, categoryId = "mindx", compact = false }) {
+export default function MindxIncomePanel({ mindx, uid, period, transactions, categoryId = "mindx", compact = false, connectionOnly = false }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [amountText, setAmountText] = useState("");
@@ -36,7 +36,8 @@ export default function MindxIncomePanel({ mindx, uid, period, transactions, cat
           <div className="sm:col-span-2"><button className={primary} disabled={working || mindx.checkingAuth}>Kết nối Salary Tracker</button></div>
         </form> : <div className="grid gap-4">
           {!compact && <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><span className="min-w-0 truncate text-slate-500 dark:text-slate-400">{mindx.account.email}</span><button type="button" className={`${button} !min-h-9 !px-3`} onClick={() => act(() => mindx.disconnect())}>Ngắt kết nối</button></div>}
-          {mindx.loading ? <p className={muted}>Đang lấy bảng lương…</p> : row ? <>
+          {connectionOnly ? <p className={`text-sm ${muted}`}>Đã kết nối Salary Tracker. Lương của từng kỳ được tự cập nhật trong Thu chi và Tổng kết theo tháng công việc phát sinh.</p>
+          : mindx.loading ? <p className={muted}>Đang lấy bảng lương…</p> : row ? <>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30"><p className="text-xs text-slate-500 dark:text-slate-400">Lương dự kiến</p><p className="mt-1 break-words text-base font-extrabold text-emerald-800 dark:text-emerald-300 sm:text-lg">{formatMoney(row.expectedIncome)}</p></div>
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-xs text-slate-500 dark:text-slate-400">Công việc xác nhận</p><p className="mt-1 break-words text-base font-extrabold sm:text-lg">{formatMoney(row.confirmedWork)}</p></div>

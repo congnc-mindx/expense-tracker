@@ -1,8 +1,9 @@
 import { formatMoney } from "../../utils/money";
 import { socialDirectionSummary } from "../../utils/socialView";
 import { button, muted } from "../finance/ui";
+import OverflowOccasions from "./OverflowOccasions";
 
-function DirectionSummary({ entries, direction, occasion }) {
+function DirectionSummary({ entries, direction, occasion, onDetails }) {
   const summary = socialDirectionSummary(entries, direction, occasion);
   const incoming = direction === "received";
   return (
@@ -10,16 +11,7 @@ function DirectionSummary({ entries, direction, occasion }) {
       <p className={`text-base font-extrabold tabular-nums ${summary.total ? (incoming ? "text-emerald-700 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400") : "text-slate-400 dark:text-slate-500"}`}>
         {summary.total ? formatMoney(summary.total) : "—"}
       </p>
-      {summary.occasions.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {summary.occasions.map((item) => (
-            <span key={item.id} className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1 text-[13px] leading-5 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title={`${item.label}: ${formatMoney(item.amount)}`}>
-              <span className="truncate">{item.label}</span>
-              {summary.occasions.length > 1 && <strong className="shrink-0 tabular-nums text-slate-800 dark:text-slate-100">{formatMoney(item.amount)}</strong>}
-            </span>
-          ))}
-        </div>
-      )}
+      <OverflowOccasions occasions={summary.occasions} onDetails={onDetails} />
     </div>
   );
 }
@@ -46,11 +38,11 @@ export default function SocialPeopleTable({ people, occasion, onSelect }) {
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div className="min-w-0 rounded-xl bg-rose-50/70 p-3 dark:bg-rose-950/20">
                 <p className="mb-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">Mình gửi</p>
-                <DirectionSummary entries={person.entries} direction="given" occasion={occasion} />
+                <DirectionSummary entries={person.entries} direction="given" occasion={occasion} onDetails={() => onSelect(person.key)} />
               </div>
               <div className="min-w-0 rounded-xl bg-emerald-50/70 p-3 dark:bg-emerald-950/20">
                 <p className="mb-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">Họ gửi</p>
-                <DirectionSummary entries={person.entries} direction="received" occasion={occasion} />
+                <DirectionSummary entries={person.entries} direction="received" occasion={occasion} onDetails={() => onSelect(person.key)} />
               </div>
             </div>
           </article>
@@ -81,8 +73,8 @@ export default function SocialPeopleTable({ people, occasion, onSelect }) {
                   <button type="button" className="text-left text-sm font-bold leading-6 text-emerald-700 hover:underline dark:text-emerald-400" onClick={() => onSelect(person.key)}>{person.name}</button>
                 </th>
                 <td className="break-words px-2 py-4 text-sm leading-6 text-slate-600 dark:text-slate-400">{person.group}</td>
-                <td className="border-l-2 border-rose-100 px-3 py-3 dark:border-rose-900/30"><DirectionSummary entries={person.entries} direction="given" occasion={occasion} /></td>
-                <td className="border-l-4 border-slate-300 px-3 py-3 dark:border-slate-600"><DirectionSummary entries={person.entries} direction="received" occasion={occasion} /></td>
+                <td className="min-w-0 border-l-2 border-rose-100 px-3 py-3 dark:border-rose-900/30"><DirectionSummary entries={person.entries} direction="given" occasion={occasion} onDetails={() => onSelect(person.key)} /></td>
+                <td className="border-l-4 border-slate-300 px-3 py-3 dark:border-slate-600"><DirectionSummary entries={person.entries} direction="received" occasion={occasion} onDetails={() => onSelect(person.key)} /></td>
                 <td className="px-2 py-3 text-center">
                   <button type="button" className={`${button} !min-h-9 !px-2.5 !text-xs`} onClick={() => onSelect(person.key)} aria-label={`Xem và sửa các khoản của ${person.name}`}>Xem / Sửa</button>
                 </td>

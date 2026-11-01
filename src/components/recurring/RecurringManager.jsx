@@ -14,11 +14,12 @@ export default function RecurringManager({ rules, month, onSave, onRemove, onTog
   const [filter, setFilter] = useState("all");
   const [working, setWorking] = useState("");
   const [localError, setLocalError] = useState("");
-  const filtered = rules.filter(rule => filter === "all" || recurringType(rule) === filter)
+  const visibleRules = rules.filter((rule) => !rule.archived);
+  const filtered = visibleRules.filter(rule => filter === "all" || recurringType(rule) === filter)
     .sort((a, b) => Number(b.active) - Number(a.active) || (b.updatedAt || 0) - (a.updatedAt || 0));
   const paging = useIncrementalList(filtered, [filter], 10);
-  const income = rules.filter(rule => recurringType(rule) === "income").length;
-  const expense = rules.filter(rule => recurringType(rule) === "expense").length;
+  const income = visibleRules.filter(rule => recurringType(rule) === "income").length;
+  const expense = visibleRules.filter(rule => recurringType(rule) === "expense").length;
 
   async function apply(action, rule) {
     if (busy || working) return;
@@ -30,14 +31,14 @@ export default function RecurringManager({ rules, month, onSave, onRemove, onTog
   return <section className={`${panel} min-w-0`} aria-label="Quản lý khoản định kỳ">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h2 className="text-lg font-extrabold">Khoản thu chi định kỳ</h2>
-        <p className={`mt-1 max-w-2xl ${muted}`}>Tạo một lần, tự hiển thị dự kiến theo tháng. Chỉ cộng vào thực tế sau khi bấm Ghi đã thu/chi ở tháng tương ứng.</p></div>
+        <p className={`mt-1 max-w-2xl ${muted}`}>Khoản chi tự tính từ tháng đến hạn; khoản thu khác vẫn ghi nhận khi nhận tiền.</p></div>
       <div className="flex flex-wrap gap-2">
         <button type="button" className={button} onClick={() => onCreate("expense")}>+ Khoản chi</button>
         <button type="button" className={primary} onClick={() => onCreate("income")}>+ Khoản thu</button>
       </div>
     </div>
     <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Lọc loại khoản định kỳ">
-      {[["all", `Tất cả (${rules.length})`], ["expense", `Khoản chi (${expense})`], ["income", `Khoản thu (${income})`]].map(([value, label]) =>
+      {[["all", `Tất cả (${visibleRules.length})`], ["expense", `Khoản chi (${expense})`], ["income", `Khoản thu (${income})`]].map(([value, label]) =>
         <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}
           className={`${filter === value ? primary : button} !min-h-9 !rounded-lg !px-3 !text-xs`}>{label}</button>)}
     </div>

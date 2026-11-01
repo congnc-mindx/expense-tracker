@@ -41,7 +41,7 @@ test("Ghi đã chi được bảo vệ bằng Firestore transaction và không t
   assert.match(hook,/runTransaction\(db/);
   assert.match(hook,/existing\.exists\(\)/);
   assert.match(hook,/recurringMonth/);
-  assert.match(read("src/App.jsx"),/recurringForMonth\(recurringRules,month,transactions\)/);
+  assert.match(read("src/App.jsx"),/recurringForMonth\(recurringRules,\s*month,\s*transactions\)/);
 });
 test("UX mới: chi đầu tiên, lịch không spinner, dự kiến, và xem thêm dùng chung",()=>{
   assert.match(read("src/App.jsx"),/useState\("expense"\)/);

@@ -58,7 +58,8 @@ export default function TransactionList({ rows, onEdit, onDelete, onSocialNaviga
                 {tx.source ? ` · ${tx.source}` : ""} ·{" "}
                 {tx.date.split("-").reverse().join("/")}
               </p>
-              {tx.virtual && <span className="mr-2 text-xs text-emerald-700 dark:text-emerald-400">Lặp hằng tháng</span>}
+              {tx.origin === "mindx" && <span className="mr-2 text-xs text-emerald-700 dark:text-emerald-400">Lương mindX · tự đồng bộ</span>}
+              {tx.origin === "recurring" && <span className="mr-2 text-xs text-emerald-700 dark:text-emerald-400">{tx.autoAccrued ? "Chi định kỳ · tự tính trong tháng" : "Lặp hằng tháng"}</span>}
               {!isActual(tx) && (
                 <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
                   Dự kiến
@@ -71,7 +72,7 @@ export default function TransactionList({ rows, onEdit, onDelete, onSocialNaviga
               {tx.type === "income" ? "+" : "−"}
               {formatMoney(tx.amount)}
             </p>
-            {tx.virtual ? <div className="flex w-full justify-end sm:w-auto">
+            {tx.virtual && (tx.origin === "mindx" || tx.autoAccrued) ? null : tx.virtual ? <div className="flex w-full justify-end sm:w-auto">
               <button type="button" className={`${button} !min-h-9 !text-xs`} disabled={paying===tx.id || tx.date>localDate() || !onRecurringPayment} onClick={()=>pay(tx)}
                 title={tx.date>localDate()?"Chỉ ghi nhận khi đến hạn":"Ghi khoản thu/chi thực tế vào Firebase"}>
                 {paying===tx.id ? "Đang lưu…" : tx.date>localDate() ? "Chưa đến hạn" : tx.type === "income" ? "Ghi đã nhận" : "Ghi đã chi"}

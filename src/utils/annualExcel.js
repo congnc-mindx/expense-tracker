@@ -1,4 +1,6 @@
 import { isActual } from "./finance.js";
+import { mindxSalaryTransactions, legacyMindxReceiptsExcluded } from "../integrations/mindx/projection.js";
+import { automaticRecurringExpenses } from "./automaticLedger.js";
 import { socialToTransaction } from "./socialAccounting.js";
 import { resolveMonthlyBudget } from "./budgetInheritance.js";
 import { defaultCategoryConfig, resolveCategoryConfig, categoryById } from "./categoryConfig.js";
@@ -12,7 +14,7 @@ const info = (value) => value == null ? "" : String(value);
 const monthKey = (year, month) => `${year}-${String(month).padStart(2, "0")}`;
 
 function dataRows(snapshot, key) { return snapshot?.collections?.[key] || []; }
-export function buildAnnualSheets(snapshot, year, salaryRows = []) {
+export function buildAnnualSheets(snapshot, year, salaryRows = [], salaryUid = "") {
   if (!Number.isInteger(year) || year < 2023 || year > 2091) throw new Error("Năm sao lưu phải nằm trong khoảng 2023–2091.");
   const transactions = dataRows(snapshot, "transactions");
   const social = dataRows(snapshot, "socialEntries");
@@ -21,7 +23,13 @@ export function buildAnnualSheets(snapshot, year, salaryRows = []) {
   const preferences = dataRows(snapshot, "preferences");
   const yearPlans = dataRows(snapshot, "yearPlans");
   const config = resolveCategoryConfig(preferences.find((row) => row.id === "categories")) || defaultCategoryConfig();
-  const combined = [...transactions, ...social.map(socialToTransaction)].filter((row) => row.date?.startsWith(`${year}-`))
+  const recurringRules = preferences.find((row) => row.id === "recurringExpenses")?.items || [];
+  const automaticExpenses = automaticRecurringExpenses(recurringRules, transactions);
+  const mindxRows = mindxSalaryTransactions(salaryRows, salaryUid, transactions,
+    config.income.find((cat) => cat.id === "mindx")?.id || "salary");
+  const combined = [...legacyMindxReceiptsExcluded(transactions, salaryRows, salaryUid),
+    ...social.map(socialToTransaction), ...automaticExpenses, ...mindxRows]
+    .filter((row) => row.date?.startsWith(`${year}-`))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const amounts = Array.from({ length: 12 }, (_, index) => ({ month: index + 1, income: 0, expense: 0 }));
   for (const tx of combined) {
@@ -32,7 +40,7 @@ export function buildAnnualSheets(snapshot, year, salaryRows = []) {
   const totals = amounts.reduce((acc, month) => ({ income: acc.income + month.income, expense: acc.expense + month.expense }), { income: 0, expense: 0 });
   const summary = [
     ["zWhisFlow · BÁO CÁO NĂM " + year],
-    ["Thu chi thực tế theo ngày giao dịch. Dự kiến không được cộng vào tổng."],
+    ["Thu nhập mindX theo tháng công việc; khoản chi dự kiến tự tính từ tháng đến hạn."],
     ["Tháng", "Thực thu (VND)", "Thực chi (VND)", "Chênh lệch (VND)"],
     ...amounts.map((a, index) => ["Tháng " + a.month, moneyCell(a.income), moneyCell(a.expense), formula(`B${index + 4}-C${index + 4}`, a.income - a.expense)]),
     ["CẢ NĂM", formula("SUM(B4:B15)", totals.income), formula("SUM(C4:C15)", totals.expense), formula("B16-C16", totals.income - totals.expense)],
@@ -62,8 +70,8 @@ export function buildAnnualSheets(snapshot, year, salaryRows = []) {
     for (const task of plan.tasks || []) taskRows.push([plan.title, task.title, moneyCell(task.estimatedAmount), moneyCell(task.preparedAmount), task.done ? "Có" : "Không"]);
   }
   const yearPlan = yearPlans.find((row) => String(row.id) === String(year));
-  const yearGoalRows = [["Tháng", "Mục tiêu thu (VND)", "Tiết kiệm (VND)"],
-    ...Array.from({ length: 12 }, (_, i) => [monthKey(year, i + 1), moneyCell(yearPlan?.months?.[i]?.target || 0), moneyCell(yearPlan?.months?.[i]?.savings || 0)])];
+  const yearGoalRows = [["Tháng", "Mục tiêu thu (VND)", "Mục tiêu tiết kiệm (VND)", "Đã tiết kiệm (VND)"],
+    ...Array.from({ length: 12 }, (_, i) => [monthKey(year, i + 1), moneyCell(yearPlan?.months?.[i]?.target || 0), moneyCell(yearPlan?.months?.[i]?.savingsTarget || 0), moneyCell(yearPlan?.months?.[i]?.savings || 0)])];
   const salary = [["Kỳ mindX", "Dự kiến (VND)", "Công việc xác nhận (VND)", "Đang chờ (VND)", "Sửa lúc"],
     ...salaryRows.filter((row) => row.period?.startsWith(`${year}-`)).map((row) => [row.period, moneyCell(row.expectedIncome), moneyCell(row.confirmedWork), moneyCell(row.waitingWork), row.updatedAt ? new Date(row.updatedAt).toISOString() : ""])];
   const recurring = [["ID", "Loại", "Tên", "Danh mục", "Số tiền (VND)", "Ngày trong tháng", "Đang hoạt động"],
@@ -76,7 +84,8 @@ export function buildAnnualSheets(snapshot, year, salaryRows = []) {
     ["Thu chi", "Sổ mừng được ghi riêng ở sheet Sổ mừng, nhưng đã tính vào Tổng hợp và Giao dịch (không có bản ghi Firestore trùng)."],
     ["Ngân sách", "Ghi trạng thái kế thừa hiệu lực từng tháng."],
     ["Bản sao lưu đầy đủ", "Nên lưu thêm tệp JSON xuất từ Cài đặt để giữ dữ liệu gốc và phục hồi Firestore khi cần."],
-    ["Lương mindX", "Bảng dự kiến chỉ có khi kết nối Salary Tracker. Tiền đã nhận nằm trong sheet Giao dịch."],
+    ["Lương mindX", "Thu nhập theo tháng công việc phát sinh, tự cập nhật từ Salary Tracker."],
+    ["Chi định kỳ", "Tự tính từ tháng bắt đầu đến hiện tại, không tạo thêm giao dịch Firestore."],
     ["Không gồm", "Thông tin xác thực, mật khẩu và token đăng nhập."]];
   return [
     { name: "Hướng dẫn", rows: readme, moneyColumns: [] },
@@ -86,7 +95,7 @@ export function buildAnnualSheets(snapshot, year, salaryRows = []) {
     { name: "Ngân sách", rows: budgetRows, moneyColumns: [3, 5] },
     { name: "Kế hoạch", rows: planRows, moneyColumns: [5, 6] },
     { name: "Đầu việc", rows: taskRows, moneyColumns: [3, 4] },
-    { name: "Mục tiêu năm", rows: yearGoalRows, moneyColumns: [2, 3] },
+    { name: "Mục tiêu năm", rows: yearGoalRows, moneyColumns: [2, 3, 4] },
     { name: "Lương mindX", rows: salary, moneyColumns: [2, 3, 4] },
     { name: "Định kỳ", rows: recurring, moneyColumns: [5] },
     { name: "Danh mục", rows: categoryRows, moneyColumns: [] },
@@ -153,11 +162,11 @@ function makeXlsx(sheets) {
   sheets.forEach((sheet, i) => files.push([`xl/worksheets/sheet${i+1}.xml`, sheetXml(sheet)]));
   return zip(files);
 }
-export function buildAnnualWorkbook(snapshot, year, salaryRows = []) {
-  return makeXlsx(buildAnnualSheets(snapshot, year, salaryRows));
+export function buildAnnualWorkbook(snapshot, year, salaryRows = [], salaryUid = "") {
+  return makeXlsx(buildAnnualSheets(snapshot, year, salaryRows, salaryUid));
 }
-export function downloadAnnualWorkbook(snapshot, year, salaryRows = []) {
-  const bytes = buildAnnualWorkbook(snapshot, year, salaryRows);
+export function downloadAnnualWorkbook(snapshot, year, salaryRows = [], salaryUid = "") {
+  const bytes = buildAnnualWorkbook(snapshot, year, salaryRows, salaryUid);
   const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");

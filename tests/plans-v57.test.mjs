@@ -54,7 +54,7 @@ test("Điều hướng, backup và Firebase được nối đúng, không cộng
   assert.match(app, /<PlansPage store=\{plansStore\}/);
   assert.match(layout, /\["plans", "Kế hoạch"/);
   assert.match(src("firebase/backup.js"), /"plans"/);
-  assert.match(app, /\[\.\.\.transactions, \.\.\.socialStore.rows\.map\(socialToTransaction\)\]/);
+  assert.match(app, /socialStore.rows.map\(socialToTransaction\)/);
   assert.doesNotMatch(app, /\.\.\.plansStore\.rows/);
 });
 

@@ -23,14 +23,14 @@ test("Thu định kỳ bắt buộc chọn danh mục thu, không được dùng
   assert.throws(() => validateRecurringRule({ ...income, type: "other" }, config));
   assert.equal(validateRecurringRule({ ...income, amount: parseThousandsToVnd("355") }, config).amount, 355_000);
 });
-test("Dự kiến thu và chi cùng tháng, không được tính là thực thu/thực chi", () => {
+test("Chi định kỳ tự tính khi đến tháng, thu định kỳ vẫn là dự kiến", () => {
   const tx = recurringForMonth([expense, income], "2026-02", []);
   assert.equal(tx.length, 2);
   assert.deepEqual(tx.map(t => t.type).sort(), ["expense", "income"]);
   assert.equal(tx.find(t => t.type === "income").date, "2026-02-05");
   assert.equal(tx.find(t => t.type === "expense").date, "2026-02-28");
-  assert.equal(isActual(tx[0], "2026-12-31"), false);
-  assert.deepEqual(totals(tx), { income: 0, expense: 0 });
+  assert.equal(isActual(tx[0], "2026-12-31"), true);
+  assert.deepEqual(totals(tx, "2026-11-01"), { income: 0, expense: 3_500_000 });
 });
 test("Xác nhận kỳ thu nhập không tái xuất hiện, kỳ chi khác vẫn còn", () => {
   const id = recurringTransactionId(income.id, "2026-02");

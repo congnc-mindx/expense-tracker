@@ -18,11 +18,11 @@ test("Biểu đồ 12 tháng phân tách tiền thu, chi từ giao dịch thư�
   const result = annualCashflow(source, 2026, today);
   assert.equal(result.months.length,12);
   assert.deepEqual([result.months[0].income,result.months[0].expense],[10000000,1000000]);
-  assert.deepEqual([result.months[9].income,result.months[9].expense],[500000,2000000]);
+  assert.deepEqual([result.months[9].income,result.months[9].expense],[500000,3500000]);
   assert.deepEqual([result.months[10].income,result.months[10].expense],[0,0]);
   assert.equal(result.income, 10500000);
-  assert.equal(result.expense, 3000000);
-  assert.equal(result.balance, 7500000);
+  assert.equal(result.expense, 4500000);
+  assert.equal(result.balance, 6000000);
   assert.equal(result.scale, 10000000);
 });
 test("Không có dữ liệu thì 12 cột có giá trị 0 và thang đo an toàn", () => {

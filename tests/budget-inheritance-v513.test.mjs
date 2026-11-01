@@ -56,22 +56,22 @@ const now = new Date();
 const priorYear = String(now.getFullYear() - 1);
 const actualTxs = txs.map((x) => ({ ...x, date: x.date.replace(/^2026/, priorYear) }));
 
-test("Biểu đồ theo tuần và ngày chỉ cộng giao dịch thực tế", () => {
+test("Biểu đồ theo tuần và ngày cộng chi dự kiến khi đã đến tháng", () => {
   const analytics = monthlyAnalytics(actualTxs, `${priorYear}-10`);
-  assert.equal(analytics.expense, 100_000);
+  assert.equal(analytics.expense, 600_000);
   assert.equal(analytics.income, 300_000);
-  assert.equal(analytics.balance, 200_000);
-  assert.equal(analytics.categories[0].amount, 100_000);
-  assert.equal(analytics.periods.reduce((n, item) => n + item.expense, 0), 100_000);
-  assert.equal(analytics.daily.at(-1).balance, 200_000);
+  assert.equal(analytics.balance, -300_000);
+  assert.equal(analytics.categories[0].amount, 600_000);
+  assert.equal(analytics.periods.reduce((n, item) => n + item.expense, 0), 600_000);
+  assert.equal(analytics.daily.at(-1).balance, -300_000);
 });
 
-test("Biểu đồ năm khớp tổng chi, không lấy khoản planned", () => {
+test("Biểu đồ năm cộng chi đã đến tháng, không cộng tháng tương lai", () => {
   const analytics = yearlyAnalytics(actualTxs, Number(priorYear));
-  assert.equal(analytics.totalExpense, 180_000);
+  assert.equal(analytics.totalExpense, 680_000);
   assert.equal(analytics.totalIncome, 300_000);
-  assert.equal(analytics.categories[0].amount, 180_000);
-  assert.equal(analytics.accumulated.at(-1).balance, 120_000);
+  assert.equal(analytics.categories[0].amount, 680_000);
+  assert.equal(analytics.accumulated.at(-1).balance, -380_000);
 });
 
 test("Các thao tác xác nhận loại bỏ popup window và dùng component chung", () => {

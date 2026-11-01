@@ -59,5 +59,5 @@ test("Lịch dùng chung không còn ô số năm native và không bị cắt t
 test("Budget và kế hoạch năm cũng dùng input theo nghìn đồng", () => {
   assert.match(source("../src/components/budget/BudgetLimitDialog.jsx"), /parseThousandsToVnd/);
   assert.match(source("../src/components/budget/BudgetLimitDialog.jsx"), /formatVndAsThousands/);
-  assert.match(source("../src/pages/YearSummaryPage.jsx"), /parseThousandsToVnd/);
+  assert.match(source("../src/components/finance/YearGoalsDialog.jsx"), /parseThousandsToVnd/);
 });
