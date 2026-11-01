@@ -6,8 +6,7 @@ import BrandMark from "../common/BrandMark";
 
 const NAV = [
   ["overview", "Tổng quan", "Bức tranh tài chính tổng thể", "▥"],
-  ["expense", "Chi tiêu", "Theo dõi các khoản chi hằng ngày", "↗"],
-  ["income", "Thu nhập", "Ghi nhận tiền vào và nguồn thu", "↙"],
+  ["transactions", "Thu chi", "Ghi nhận và quản lý các khoản thu, chi", "⇄"],
   ["budget", "Ngân sách", "Hạn mức và tiến độ sử dụng", "◎"],
   ["summary", "Tổng kết", "Đối chiếu thu chi theo tháng hoặc năm", "▤"],
   ["plans", "Kế hoạch", "Mục tiêu chi tiêu và việc cần chuẩn bị", "✦"],
@@ -15,11 +14,11 @@ const NAV = [
   ["settings", "Cài đặt", "Danh mục, sao lưu và giao diện", "⚙"],
 ];
 
-export default function FinanceLayout({ page, onNavigate, month, onMonthChange, dark, onThemeChange, summaryMode, summaryYear, onSummaryYearChange, onAdd, onSignOut, signingOut, logoutError, user, children }) {
+export default function FinanceLayout({ page, onNavigate, month, onMonthChange, dark, onThemeChange, summaryMode, summaryYear, onSummaryYearChange, onAdd, addLabel, onSignOut, signingOut, logoutError, user, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const current = useMemo(() => NAV.find((item) => item[0] === page) || NAV[0], [page]);
-  const hasPeriod = ["overview", "expense", "income", "budget", "summary"].includes(page);
-  const hasAdd = ["overview", "expense", "income", "summary", "social"].includes(page);
+  const hasPeriod = ["overview", "transactions", "budget", "summary"].includes(page);
+  const hasAdd = ["overview", "transactions", "summary", "social", "plans"].includes(page);
   const showYear = page === "summary" && summaryMode === "year";
   const navigation = <nav className="grid gap-1.5">{NAV.map(([id, label, _, icon]) => <button key={id} type="button" onClick={() => { onNavigate(id); setMenuOpen(false); }}
       className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-emerald-600 ${page === id ? "bg-emerald-600 text-white shadow-sm shadow-emerald-800/10" : "text-[#45624c] hover:bg-[#e8f4eb] dark:text-slate-300 dark:hover:bg-slate-800"}`}>
@@ -39,9 +38,9 @@ export default function FinanceLayout({ page, onNavigate, month, onMonthChange, 
           <div className="min-w-0"><h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{current[1]}</h1><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{current[2]}</p></div>
           <div className="flex w-full min-w-0 flex-wrap items-center gap-2 xl:w-auto xl:flex-nowrap">
             {hasPeriod && <div className="min-w-0 flex-[1_1_230px] sm:flex-none">
-              {showYear ? <YearPicker value={summaryYear} onChange={onSummaryYearChange} className="w-full sm:w-[270px]"/> : <MonthPicker value={month} onChange={onMonthChange} className="w-full sm:w-[270px]"/>}
+              {showYear ? <YearPicker value={summaryYear} onChange={onSummaryYearChange} className="w-full sm:w-[270px]"/> : <MonthPicker value={month} onChange={onMonthChange} className="w-full sm:w-[420px]"/>}
             </div>}
-            {hasAdd && <button type="button" className={`${primary} flex-1 whitespace-nowrap sm:flex-none`} onClick={onAdd}>{page === "social" ? "+ Ghi nhận khoản" : "+ Thêm giao dịch"}</button>}
+            {hasAdd && <button type="button" className={`${primary} flex-1 whitespace-nowrap sm:flex-none`} onClick={onAdd}>{page === "social" ? "+ Ghi nhận khoản" : addLabel || "+ Thêm giao dịch"}</button>}
             <button type="button" className={`${button} !px-3`} onClick={onThemeChange} aria-label={dark ? "Bật giao diện sáng" : "Bật giao diện tối"} title={dark ? "Giao diện sáng" : "Giao diện tối"}>{dark ? "☀" : "☾"}</button>
           </div>
         </header>

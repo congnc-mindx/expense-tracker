@@ -1,3 +1,5 @@
+import useIncrementalList from "../common/useIncrementalList";
+import LoadMoreButton from "../common/LoadMoreButton";
 import { useState } from "react";
 import useModalDialog from "../common/useModalDialog";
 import { socialName } from "../../utils/social";
@@ -14,6 +16,7 @@ export default function SocialHistoryDialog({ person, onClose, onAdd, onEdit, on
     b.date.localeCompare(a.date) || Number(b.createdAt || 0) - Number(a.createdAt || 0),
   );
 
+  const paging = useIncrementalList(entries, [person.key], 10);
   async function confirmDelete(id) {
     if (deleting) return;
     setDeleting(true);
@@ -52,7 +55,7 @@ export default function SocialHistoryDialog({ person, onClose, onAdd, onEdit, on
           </div>
           {error && <p role="alert" className="mb-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{error}</p>}
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {entries.map((entry) => (
+            {paging.visible.map((entry) => (
               <article key={entry.id} className="py-3.5">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <div className="min-w-0 flex-[1_1_220px]">
@@ -82,6 +85,7 @@ export default function SocialHistoryDialog({ person, onClose, onAdd, onEdit, on
               </article>
             ))}
           </div>
+          <LoadMoreButton remaining={paging.remaining} batch={10} onClick={paging.loadMore} noun="khoản" />
         </div>
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-3.5 dark:border-slate-800 sm:px-6">
           <button type="button" className={button} disabled={deleting} onClick={onClose}>Đóng</button>

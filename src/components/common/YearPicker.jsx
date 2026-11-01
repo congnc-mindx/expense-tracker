@@ -1,46 +1,21 @@
+import { useRef, useState } from "react";
 import { MIN_YEAR, MAX_YEAR } from "../../utils/dateLimits";
+import FloatingPanel from "./FloatingPanel";
+import YearGrid, { yearPage } from "./YearGrid";
 import { button } from "../finance/ui";
 
-/** Compact year navigation aligned with MonthPicker. */
+/** Summary year selector with the same year grid as the month selector. */
 export default function YearPicker({ value, onChange, className = "" }) {
-  const year = Number(value);
-  return (
-    <div className={`flex min-w-0 items-center gap-1.5 ${className}`}>
-      <button
-        type="button"
-        className={`${button} !px-3`}
-        disabled={year <= MIN_YEAR}
-        onClick={() => onChange(year - 1)}
-        aria-label="Năm trước"
-      >
-        ‹
-      </button>
-      <label
-        className={`${button} min-w-0 flex-1 !justify-center gap-2 whitespace-nowrap`}
-      >
-        <span className="shrink-0">Năm</span>
-        <input
-          type="number"
-          min={MIN_YEAR}
-          max={MAX_YEAR}
-          value={year}
-          aria-label="Năm tổng kết"
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            if (next >= MIN_YEAR && next <= MAX_YEAR) onChange(next);
-          }}
-          className="w-17 min-w-0 bg-transparent text-center font-semibold tabular-nums outline-none"
-        />
-      </label>
-      <button
-        type="button"
-        className={`${button} !px-3`}
-        disabled={year >= MAX_YEAR}
-        onClick={() => onChange(year + 1)}
-        aria-label="Năm sau"
-      >
-        ›
-      </button>
-    </div>
-  );
+  const ref = useRef(null);
+  const [open,setOpen]=useState(false);
+  const [pageStart,setPageStart]=useState(yearPage(Number(value)));
+  return <div className={`flex min-w-0 items-center gap-1.5 ${className}`}>
+    <button type="button" aria-label="Năm trước" className={`${button} !px-3`} disabled={value<=MIN_YEAR} onClick={()=>onChange(Number(value)-1)}>‹</button>
+    <button type="button" ref={ref} aria-label="Chọn năm tổng kết" aria-expanded={open} aria-haspopup="dialog"
+      className={`${button} min-w-0 flex-1 !justify-center tabular-nums`} onClick={()=>{setPageStart(yearPage(Number(value)));setOpen(o=>!o);}}>Năm {value} ⌄</button>
+    <button type="button" aria-label="Năm sau" className={`${button} !px-3`} disabled={value>=MAX_YEAR} onClick={()=>onChange(Number(value)+1)}>›</button>
+    <FloatingPanel anchorRef={ref} open={open} onClose={()=>setOpen(false)} minWidth={300} maxHeight={330} className="!rounded-2xl !p-3">
+      <div role="dialog" aria-label="Chọn năm"><YearGrid selected={value} pageStart={pageStart} onPageChange={setPageStart} onSelect={(y)=>{onChange(y);setOpen(false);ref.current?.focus();}}/></div>
+    </FloatingPanel>
+  </div>;
 }

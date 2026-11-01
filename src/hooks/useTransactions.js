@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { doc, runTransaction } from "firebase/firestore";
+import { db } from "../firebase/client";
 import { useCloudCollection } from "../firebase/useCloudCollection";
 import { defaultCategoryConfig } from "../utils/categoryConfig.js";
 import { validDate } from "../utils/finance";
@@ -20,12 +22,26 @@ export function useTransactions(uid, config) {
     if (store.loading || store.error) throw new Error(store.error || "Dữ liệu chưa tải xong.");
     if (id && !transactions.some((tx) => tx.id === id)) throw new Error("Giao dịch không tồn tại hoặc đã bị xóa.");
     const existing = id ? transactions.find((tx) => tx.id === id) : null;
-    await store.save(id || crypto.randomUUID(), { ...clean, createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now() });
+    await store.save(id || crypto.randomUUID(), { ...clean,
+      ...(existing?.recurringId ? {recurringId:existing.recurringId,recurringMonth:existing.recurringMonth} : {}),
+      createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now() });
+  }
+  async function saveRecurringPayment(tx, id) {
+    if (store.loading || store.error) throw new Error(store.error || "Giao dịch chưa tải xong.");
+    if (transactions.some(item=>item.id===id)) throw new Error("Khoản này đã được ghi nhận trong tháng.");
+    const clean=validateTransaction({type:tx.type,date:tx.date,category:tx.category,amount:tx.amount,status:"actual",note:tx.note,source:""},config);
+    // Atomic create: even two browser tabs cannot record the same installment twice.
+    await runTransaction(db, async (transaction) => {
+      const ref=doc(db,"users",uid,"transactions",id);
+      const existing=await transaction.get(ref);
+      if(existing.exists()) throw new Error("Khoản này đã được ghi nhận trong tháng.");
+      transaction.set(ref,{...clean,recurringId:tx.recurringId,recurringMonth:tx.recurringMonth,createdAt:Date.now(),updatedAt:Date.now()});
+    });
   }
   async function deleteTransaction(id) {
     if (store.loading || store.error) throw new Error(store.error || "Dữ liệu chưa tải xong.");
     await store.remove(id);
   }
   const availableYears = useMemo(() => [...new Set([new Date().getFullYear(), ...transactions.map((tx) => Number(tx.date.slice(0, 4)) )])].sort((a,b) => b-a), [transactions]);
-  return { transactions, saveTransaction, deleteTransaction, availableYears, error: store.error, loading: store.loading };
+  return { transactions, saveTransaction, deleteTransaction, saveRecurringPayment, availableYears, error: store.error, loading: store.loading };
 }

@@ -1,3 +1,5 @@
+import useIncrementalList from "../common/useIncrementalList";
+import LoadMoreButton from "../common/LoadMoreButton";
 import { useEffect, useMemo, useState } from "react";
 import SmartSelect from "../common/SmartSelect";
 import CategoryEditorDialog from "./CategoryEditorDialog";
@@ -29,8 +31,9 @@ export default function CategoryManager({ initial, onSave, usedCategoryIds = [] 
     const groupName = config.groups.find((group) => group.id === cat.groupId)?.name || "";
     return normalize(`${cat.name} ${groupName}`).includes(normalize(query));
   }), [config, type, query, groupFilter, showHidden]);
+  const paging = useIncrementalList(items, [type, query, groupFilter, showHidden], 10);
   const orderedGroups = type === "expense"
-    ? config.groups.filter((group) => items.some((cat) => cat.groupId === group.id))
+    ? config.groups.filter((group) => paging.visible.some((cat) => cat.groupId === group.id))
     : [{ id: "income", name: "Nguồn thu" }];
   const countActive = config[type].filter((cat) => !cat.hidden).length;
   const countHidden = config[type].filter((cat) => cat.hidden).length;
@@ -147,12 +150,13 @@ export default function CategoryManager({ initial, onSave, usedCategoryIds = [] 
           <h3 className="text-sm font-bold">{group.name}</h3><span className="text-xs text-slate-500 dark:text-slate-400">{items.filter((cat) => cat.groupId === group.id).length} danh mục</span>
         </div>
         <div className="divide-y divide-[#eef3ef] px-1 dark:divide-slate-800">
-          {items.filter((cat) => cat.groupId === group.id).map((cat) => <CategoryRow key={cat.id} cat={cat}/>)}
+          {paging.visible.filter((cat) => cat.groupId === group.id).map((cat) => <CategoryRow key={cat.id} cat={cat}/>)}
         </div>
       </div>) : <div className="rounded-2xl border border-dashed border-[#d0e1d5] px-5 py-10 text-center dark:border-slate-700">
         <p className="font-semibold">Không có danh mục phù hợp</p><p className={`mt-2 ${muted}`}>Thử tìm tên khác, đổi bộ lọc hoặc bật hiển thị danh mục ẩn.</p>
       </div>}
     </div>
+    <LoadMoreButton remaining={paging.remaining} batch={10} onClick={paging.loadMore} noun="danh mục" />
     <p className="mt-5 text-xs leading-5 text-slate-500 dark:text-slate-400">Danh mục đang có giao dịch hoặc hạn mức ngân sách sẽ không được xóa. Bạn có thể đổi tên, đổi nhóm hoặc ẩn mà không làm mất lịch sử; các danh mục tự động được bảo vệ.</p>
 
     {editor && <CategoryEditorDialog key={`${type}:${editor.id || "new"}`} item={editor.id ? config[type].find((cat) => cat.id === editor.id) : null}

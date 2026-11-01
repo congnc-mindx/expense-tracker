@@ -7,6 +7,8 @@ import { panel, input, muted } from "../components/finance/ui";
 import SocialEntryModal from "../components/social/SocialEntryModal";
 import SocialHistoryDialog from "../components/social/SocialHistoryDialog";
 import SocialPeopleTable from "../components/social/SocialPeopleTable";
+import useIncrementalList from "../components/common/useIncrementalList";
+import LoadMoreButton from "../components/common/LoadMoreButton";
 
 const sum = (rows, direction) => rows.filter((row) => row.direction === direction).reduce((total, row) => total + row.amount, 0);
 
@@ -28,6 +30,7 @@ export default function SocialLedgerPage({ store, addSignal = 0 }) {
     () => filterSocialPeople(people, { search, group: groupFilter, occasion: occasionFilter }),
     [people, search, groupFilter, occasionFilter],
   );
+  const paging = useIncrementalList(filtered, [search,groupFilter,occasionFilter], 10);
   const visibleEntryCount = filtered.reduce((total, person) =>
     total + person.entries.filter((entry) => !occasionFilter || entry.occasion === occasionFilter).length, 0,
   );
@@ -75,7 +78,10 @@ export default function SocialLedgerPage({ store, addSignal = 0 }) {
         </div>
         <p className={`mb-4 text-sm ${muted}`}>{filtered.length} người · {visibleEntryCount} khoản phù hợp</p>
         {store.loading ? <p className={muted}>Đang tải sổ mừng từ Firebase…</p> :
-          <SocialPeopleTable people={filtered} occasion={occasionFilter} onSelect={setSelected} />}
+          <>
+            <SocialPeopleTable people={paging.visible} occasion={occasionFilter} onSelect={setSelected} />
+            <LoadMoreButton remaining={paging.remaining} batch={10} onClick={paging.loadMore} noun="người" />
+          </>}
       </section>
 
       {activePerson && !entryModal && (

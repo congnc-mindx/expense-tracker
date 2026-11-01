@@ -1,3 +1,5 @@
+import useIncrementalList from "../components/common/useIncrementalList";
+import LoadMoreButton from "../components/common/LoadMoreButton";
 import YearSummaryPage from "./YearSummaryPage";
 import FinanceCards from "../components/finance/FinanceCards";
 import { button, primary, panel } from "../components/finance/ui";
@@ -25,6 +27,7 @@ export default function SummaryPage({
       type: rows.find((tx) => tx.category === id).type,
     }))
     .sort((a, b) => b.amount - a.amount);
+  const paging = useIncrementalList(categories, [month,mode], 10);
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center gap-2">
@@ -73,7 +76,7 @@ export default function SummaryPage({
             <h2 className="mb-5 font-bold">Chi tiết theo danh mục</h2>
             {categories.length ? (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {categories.map((cat) => (
+                {paging.visible.map((cat) => (
                   <div
                     key={cat.id}
                     className="flex items-center justify-between gap-4 py-4 text-sm"
@@ -95,6 +98,7 @@ export default function SummaryPage({
                 Chưa có giao dịch thực tế trong tháng này.
               </p>
             )}
+            <LoadMoreButton remaining={paging.remaining} batch={10} onClick={paging.loadMore} noun="danh mục" />
           </section>
         </>
       )}
