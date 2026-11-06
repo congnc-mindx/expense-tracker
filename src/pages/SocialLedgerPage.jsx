@@ -50,12 +50,12 @@ export default function SocialLedgerPage({ store, addSignal = 0 }) {
 
   return (
     <div className="grid min-w-0 max-w-full gap-5 sm:gap-6">
-      <p className={`${muted} -mt-2`}>Theo dõi các khoản gửi và nhận từ năm 2023 đến 2091. Chọn “Xem / Sửa” để quản lý từng lần phát sinh.</p>
+      <p className={`${muted} -mt-2`}>Theo dõi các khoản gửi và nhận từ năm 2023 đến 2091. Bấm vào từng dòng để mở toàn bộ lịch sử của một người.</p>
       {store.error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-300">{store.error}</p>}
       <div className="grid gap-3 sm:grid-cols-3">
         {[
           ["Số người liên hệ", String(people.length), "text-slate-800 dark:text-slate-100"],
-          ["Mình đã gửi", formatMoney(sum(store.rows, "given")), "text-rose-600 dark:text-rose-400"],
+          ["Mình đã gửi", formatMoney(sum(store.rows, "given")), "text-amber-600 dark:text-amber-400"],
           ["Họ đã gửi", formatMoney(sum(store.rows, "received")), "text-emerald-700 dark:text-emerald-400"],
         ].map(([label, value, color]) => (
           <section key={label} className={panel}>

@@ -5,6 +5,7 @@ import { exportBackup, downloadJson } from "../../firebase/backup";
 import { validateBackup, prepareRestore, applyRestore } from "../../firebase/restoreBackup";
 import { downloadAnnualWorkbook } from "../../utils/annualExcel";
 import { useConfirm } from "../common/ConfirmProvider";
+import SmartSelect from "../common/SmartSelect";
 
 const exportYears = (now = new Date().getFullYear()) => Array.from({ length: 5 }, (_, index) => now - index).filter((year) => year >= 2023);
 
@@ -33,6 +34,7 @@ export default function DataBackupPanel({ user, mindx }) {
     } catch (reason) { setError(reason?.message || "Không thể xuất dữ liệu."); }
     finally { setBusy(false); }
   }
+
   async function selectRestoreFile(event) {
     const file = event.target.files?.[0];
     setPreview(null); setRestoreFile(""); setMessage(""); setError(""); setOverwrite(false);
@@ -48,6 +50,7 @@ export default function DataBackupPanel({ user, mindx }) {
     } catch (reason) { setError(reason?.message || "Không thể đọc file JSON."); }
     finally { setBusy(false); event.target.value = ""; }
   }
+
   async function restore() {
     if (!preview || busy) return;
     const count = overwrite ? preview.validated.count : preview.additions;
@@ -60,10 +63,8 @@ export default function DataBackupPanel({ user, mindx }) {
     if (!accepted) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      // The pre-restore snapshot must be downloaded successfully before ANY writes.
       const prior = await exportBackup(user.uid);
       downloadJson(prior, `zwhisflow-before-restore-${localDate()}.json`);
-      // Refresh the comparison after confirmation to avoid stale previews.
       const refreshed = await prepareRestore(user.uid, preview.validated);
       const result = await applyRestore(user.uid, refreshed, overwrite);
       setMessage(`Đã khôi phục ${result.written} bản ghi. ${result.skipped} bản ghi trùng được giữ nguyên.`);
@@ -71,24 +72,34 @@ export default function DataBackupPanel({ user, mindx }) {
     } catch (reason) { setError(reason?.message || "Khôi phục chưa thành công. Kiểm tra lại dữ liệu."); }
     finally { setBusy(false); }
   }
-  return <div className="grid gap-4">
-    <section className={panel}>
-      <h2 className="text-lg font-bold">Sao lưu & xuất dữ liệu</h2>
-      <p className={`mt-2 ${muted}`}>Xuất Excel 5 năm gần nhất hoặc sao lưu JSON của zWhisFlow để khôi phục. Dữ liệu Firebase mindX nằm ở project riêng.</p>
-      <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-sm font-semibold">Năm xuất Excel
-          <select aria-label="Năm xuất Excel" value={year} onChange={(event) => setYear(Number(event.target.value))}
-            className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-            {years.map((value) => <option key={value} value={value}>Năm {value}</option>)}
-          </select>
-        </label>
-        <button type="button" className={primary} disabled={busy} onClick={() => backup(true)}>{busy ? "Đang xử lý…" : `↓ Xuất Excel ${year}`}</button>
-        <button type="button" className={button} disabled={busy} onClick={() => backup(false)}>↓ Sao lưu JSON</button>
-      </div>
-      <div className="mt-5 border-t border-slate-200 pt-5 dark:border-slate-800">
-        <h3 className="text-sm font-bold">Khôi phục dữ liệu từ JSON</h3>
-        <p className={`mt-1 ${muted}`}>Mặc định chỉ thêm bản ghi còn thiếu. Không xóa dữ liệu đang có.</p>
-        <label className="mt-3 block max-w-xl text-sm font-medium">Chọn bản sao lưu zWhisFlow
+
+  return (
+    <div className="grid gap-4">
+      <section className={panel}>
+        <h2 className="text-lg font-bold">Trích xuất dữ liệu</h2>
+        <p className={`mt-2 ${muted}`}>Xuất Excel trong phạm vi 5 năm gần nhất hoặc tải toàn bộ dữ liệu gốc thành JSON để lưu trữ lâu dài.</p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-[220px_auto_auto] lg:items-end">
+          <div className="grid gap-1.5 text-sm font-semibold">
+            <span>Năm xuất Excel</span>
+            <SmartSelect
+              label="Năm xuất Excel"
+              value={String(year)}
+              onChange={(value) => setYear(Number(value))}
+              options={years.map((value) => ({ value: String(value), label: `Năm ${value}` }))}
+              className="min-w-0"
+              showIndicator
+            />
+          </div>
+          <button type="button" className={`${primary} lg:self-end`} disabled={busy} onClick={() => backup(true)}>{busy ? "Đang xử lý…" : `↓ Xuất Excel ${year}`}</button>
+          <button type="button" className={`${button} lg:self-end`} disabled={busy} onClick={() => backup(false)}>↓ Sao lưu JSON</button>
+        </div>
+        <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">File Excel phục vụ xem nhanh hoặc lưu theo năm. File JSON giữ toàn bộ dữ liệu zWhisFlow để khôi phục khi cần.</p>
+      </section>
+
+      <section className={panel}>
+        <h2 className="text-lg font-bold">Khôi phục từ JSON</h2>
+        <p className={`mt-2 ${muted}`}>Mặc định chỉ thêm bản ghi còn thiếu. Không xóa dữ liệu đang có và không tác động sang Firebase project của mindX.</p>
+        <label className="mt-4 block max-w-xl text-sm font-medium">Chọn bản sao lưu zWhisFlow
           <input type="file" accept=".json,application/json" disabled={busy} onChange={selectRestoreFile}
             className="mt-2 block w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:file:bg-slate-800 dark:file:text-emerald-300" />
         </label>
@@ -104,9 +115,10 @@ export default function DataBackupPanel({ user, mindx }) {
             {busy ? "Đang khôi phục…" : `Khôi phục ${overwrite ? preview.validated.count : preview.additions} bản ghi`}
           </button>
         </div>}
-      </div>
-    </section>
-    {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-300">{error}</p>}
-    {message && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{message}</p>}
-  </div>;
+      </section>
+
+      {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-300">{error}</p>}
+      {message && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{message}</p>}
+    </div>
+  );
 }

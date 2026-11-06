@@ -42,8 +42,9 @@ test("Trang Sổ mừng có bộ lọc thiết thực và lối sửa/xóa rõ r
   assert.doesNotMatch(page, /directionFilter|label="Chiều"/);
   assert.match(page, /filterSocialPeople/);
   assert.match(page, /<SocialHistoryDialog/);
-  assert.match(table, /Xem \/ Sửa/);
+  assert.doesNotMatch(table, /Xem \/ Sửa/);
   assert.match(table, /DirectionSummary/);
+  assert.match(table, /cursor-pointer/);
   assert.doesNotMatch(table, /table-fixed.*text-\[11px\]/);
   assert.match(history, /onEdit\(entry\)/);
   assert.match(history, /onDelete\(id\)/);

@@ -1,4 +1,5 @@
 import { isActual } from "./finance.js";
+import { debtBalanceAt, debtPayments } from "./debts.js";
 import { mindxSalaryTransactions, legacyMindxReceiptsExcluded } from "../integrations/mindx/projection.js";
 import { automaticRecurringExpenses } from "./automaticLedger.js";
 import { socialToTransaction } from "./socialAccounting.js";
@@ -22,6 +23,7 @@ export function buildAnnualSheets(snapshot, year, salaryRows = [], salaryUid = "
   const plans = dataRows(snapshot, "plans");
   const preferences = dataRows(snapshot, "preferences");
   const yearPlans = dataRows(snapshot, "yearPlans");
+  const debts = dataRows(snapshot, "debts");
   const config = resolveCategoryConfig(preferences.find((row) => row.id === "categories")) || defaultCategoryConfig();
   const recurringRules = preferences.find((row) => row.id === "recurringExpenses")?.items || [];
   const automaticExpenses = automaticRecurringExpenses(recurringRules, transactions);
@@ -77,6 +79,24 @@ export function buildAnnualSheets(snapshot, year, salaryRows = [], salaryUid = "
   const recurring = [["ID", "Loại", "Tên", "Danh mục", "Số tiền (VND)", "Ngày trong tháng", "Đang hoạt động"],
     ...(preferences.find((row) => row.id === "recurringExpenses")?.items || []).map((row) => [row.id, row.type === "income" ? "Thu" : "Chi", row.title,
       categoryById(config, row.category).name, moneyCell(row.amount), row.dayOfMonth ?? row.day ?? "", row.active === false ? "Không" : "Có"])];
+  // Debt principal transfers do not belong to revenue/expense totals. The yearly
+  // view preserves outstanding balance as-of December 31 even for older debts.
+  const endOfYear = `${year}-12-31`;
+  const debtRows = [["ID", "Chiều", "Người", "Ngày ghi nợ", "Hạn trả", "Gốc (VND)", "Đã trả lũy kế (VND)", "Còn lại cuối năm (VND)", "Ghi chú"]];
+  const debtPaymentRows = [["ID khoản nợ", "Người", "Chiều", "Ngày thanh toán", "Số tiền (VND)", "Ghi chú"]];
+  for (const debt of debts) {
+    if (!debt.date || debt.date > endOfYear || !["payable", "receivable"].includes(debt.direction)) continue;
+    const payments = debtPayments(debt);
+    const inYear = payments.filter((p) => p.date?.startsWith(`${year}-`));
+    const remaining = debtBalanceAt(debt, endOfYear);
+    if (debt.date.startsWith(`${year}-`) || inYear.length > 0 || remaining > 0) {
+      const paid = payments.filter((p) => p.date <= endOfYear).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      debtRows.push([debt.id, debt.direction === "receivable" ? "Người khác nợ tôi" : "Tôi đang nợ", debt.person,
+        debt.date, debt.dueDate || "", moneyCell(debt.amount), moneyCell(paid), moneyCell(remaining), info(debt.note)]);
+    }
+    for (const payment of inYear) debtPaymentRows.push([debt.id, debt.person,
+      debt.direction === "receivable" ? "Đã thu hồi" : "Đã trả", payment.date, moneyCell(payment.amount), info(payment.note)]);
+  }
   const categoryRows = [["Chiều", "ID", "Tên danh mục", "Nhóm", "Đã ẩn"],
     ...[...config.expense, ...config.income].map((row) => [row.type === "income" ? "Thu" : "Chi", row.id, row.name, row.groupId, row.hidden ? "Có" : "Không"])];
   const readme = [["zWhisFlow · SAO LƯU NĂM " + year], ["Thời gian xuất", new Date().toISOString()],
@@ -86,6 +106,7 @@ export function buildAnnualSheets(snapshot, year, salaryRows = [], salaryUid = "
     ["Bản sao lưu đầy đủ", "Nên lưu thêm tệp JSON xuất từ Cài đặt để giữ dữ liệu gốc và phục hồi Firestore khi cần."],
     ["Lương mindX", "Thu nhập theo tháng công việc phát sinh, tự cập nhật từ Salary Tracker."],
     ["Chi định kỳ", "Tự tính từ tháng bắt đầu đến hiện tại, không tạo thêm giao dịch Firestore."],
+    ["Sổ nợ", "Tiền gốc vay/cho vay và các lần trả không tự cộng vào thu chi; số còn lại là tại ngày 31/12."],
     ["Không gồm", "Thông tin xác thực, mật khẩu và token đăng nhập."]];
   return [
     { name: "Hướng dẫn", rows: readme, moneyColumns: [] },
@@ -99,6 +120,8 @@ export function buildAnnualSheets(snapshot, year, salaryRows = [], salaryUid = "
     { name: "Lương mindX", rows: salary, moneyColumns: [2, 3, 4] },
     { name: "Định kỳ", rows: recurring, moneyColumns: [5] },
     { name: "Danh mục", rows: categoryRows, moneyColumns: [] },
+    { name: "Sổ nợ", rows: debtRows, moneyColumns: [6, 7, 8] },
+    { name: "Trả nợ", rows: debtPaymentRows, moneyColumns: [5] },
   ];
 }
 

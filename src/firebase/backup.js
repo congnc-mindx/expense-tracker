@@ -1,7 +1,7 @@
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "./client";
 
-const COLLECTIONS = ["transactions", "budgets", "yearPlans", "socialEntries", "plans", "preferences"];
+const COLLECTIONS = ["transactions", "budgets", "yearPlans", "socialEntries", "plans", "preferences", "debts"];
 
 /** Export a user-owned offline snapshot. No legacy localStorage migration. */
 export async function exportBackup(uid) {

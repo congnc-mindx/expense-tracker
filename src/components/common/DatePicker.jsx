@@ -61,8 +61,8 @@ export default function DatePicker({ value, onChange, label = "Chọn ngày", di
           <div className="flex items-center justify-between gap-1 pb-2">
             <button type="button" className={SMALL_BUTTON} aria-label="Tháng trước" disabled={year === MIN_YEAR && month === 1} onClick={() => moveMonth(-1)}>‹</button>
             <div className="flex items-center gap-1">
-              <button type="button" className="rounded-lg px-2 py-1.5 text-sm font-extrabold hover:bg-emerald-50 dark:hover:bg-slate-700" onClick={() => setScreen("months")}>Tháng {month} <span className="text-[10px] text-slate-400">⌄</span></button>
-              <button type="button" className="rounded-lg px-2 py-1.5 text-sm font-extrabold tabular-nums hover:bg-emerald-50 dark:hover:bg-slate-700" onClick={() => {setYearStart(yearPage(year));setScreen("years");}}>{year} <span className="text-[10px] text-slate-400">⌄</span></button>
+              <button type="button" className="rounded-lg px-2 py-1.5 text-sm font-extrabold hover:bg-emerald-50 dark:hover:bg-slate-700" onClick={() => setScreen("months")}>Tháng {month}</button>
+              <button type="button" className="rounded-lg px-2 py-1.5 text-sm font-extrabold tabular-nums hover:bg-emerald-50 dark:hover:bg-slate-700" onClick={() => {setYearStart(yearPage(year));setScreen("years");}}>{year}</button>
             </div>
             <button type="button" className={SMALL_BUTTON} aria-label="Tháng sau" disabled={year === MAX_YEAR && month === 12} onClick={() => moveMonth(1)}>›</button>
           </div>

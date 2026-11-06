@@ -35,7 +35,7 @@ export default function MonthPicker({ value, onChange, className = "" }) {
       <button type="button" aria-label="Tháng trước" disabled={value <= FIRST_MONTH} className={`${button} !min-h-11 shrink-0 !px-3`} onClick={() => onChange(shiftMonth(value, -1))}>‹</button>
       <button type="button" ref={anchorRef} aria-label="Chọn tháng và năm" aria-haspopup="dialog" aria-expanded={open} onClick={openPicker}
         className={`${button} min-w-0 flex-1 !justify-center gap-2 !px-2 text-center !font-bold tabular-nums sm:!px-4`}>
-        <span className="truncate">Tháng {month}/{value.slice(0, 4)}</span><span className="text-[10px] text-slate-400">⌄</span>
+        <span className="truncate">Tháng {month}/{value.slice(0, 4)}</span>
       </button>
       <button type="button" aria-label="Tháng sau" disabled={value >= LAST_MONTH} className={`${button} !min-h-11 shrink-0 !px-3`} onClick={() => onChange(shiftMonth(value, 1))}>›</button>
     </div>
@@ -52,7 +52,7 @@ export default function MonthPicker({ value, onChange, className = "" }) {
         ) : <>
           <div className="flex items-center justify-between gap-2 px-1">
             <button type="button" aria-label="Năm trước" className="rounded-lg px-3 py-2 text-lg hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-700" disabled={year <= MIN_YEAR} onClick={() => setYear((y) => y - 1)}>‹</button>
-            <span className="text-sm font-bold tabular-nums">Năm {year}</span>
+            <span className="rounded-lg px-2 py-1 text-sm font-bold tabular-nums text-slate-600 dark:text-slate-300">Năm {year}</span>
             <button type="button" aria-label="Năm sau" className="rounded-lg px-3 py-2 text-lg hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-700" disabled={year >= MAX_YEAR} onClick={() => setYear((y) => y + 1)}>›</button>
           </div>
           <div className="grid grid-cols-3 gap-2">

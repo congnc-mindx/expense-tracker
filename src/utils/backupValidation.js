@@ -1,4 +1,4 @@
-export const RESTORE_COLLECTIONS = Object.freeze(["transactions", "budgets", "yearPlans", "socialEntries", "plans", "preferences"]);
+export const RESTORE_COLLECTIONS = Object.freeze(["transactions", "budgets", "yearPlans", "socialEntries", "plans", "preferences", "debts"]);
 const MAX_DOCS = 20000;
 const validId = (id) => typeof id === "string" && id.length > 0 && id.length <= 512 && id !== "." && id !== ".." && !id.includes("/");
 const isPlainObject = (obj) => obj !== null && typeof obj === "object" && !Array.isArray(obj);
@@ -23,7 +23,9 @@ export function validateBackup(raw) {
     throw new Error("Đây không phải bản sao lưu JSON zWhisFlow phiên bản 2.");
   const collections = {}; let count = 0;
   for (const name of RESTORE_COLLECTIONS) {
-    const rows = raw.collections[name];
+    // Legacy v2 backup files did not yet contain the optional debts collection.
+    // Treat only that one missing field as empty to preserve backwards compatibility.
+    const rows = name === "debts" && raw.collections[name] === undefined ? [] : raw.collections[name];
     if (!Array.isArray(rows)) throw new Error(`Thiếu dữ liệu ${name} trong file sao lưu.`);
     const ids = new Set();
     collections[name] = rows.map((row) => {

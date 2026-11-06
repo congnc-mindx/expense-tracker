@@ -11,14 +11,15 @@ const NAV = [
   ["summary", "Tổng kết", "Đối chiếu thu chi theo tháng hoặc năm", "▤"],
   ["plans", "Kế hoạch", "Mục tiêu chi tiêu và việc cần chuẩn bị", "✦"],
   ["social", "Sổ mừng & thăm hỏi", "Các khoản mừng, phúng viếng, thăm hỏi", "♡"],
+  ["debts", "Sổ nợ", "Khoản tôi nợ và khoản người khác nợ tôi", "⇆"],
   ["settings", "Cài đặt", "Danh mục, sao lưu và kết nối", "⚙"],
 ];
 
 export default function FinanceLayout({ page, onNavigate, month, onMonthChange, dark, onThemeChange, summaryMode, summaryYear, onSummaryYearChange, onAdd, addLabel, onSignOut, signingOut, logoutError, user, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const current = useMemo(() => NAV.find((item) => item[0] === page) || NAV[0], [page]);
-  const hasPeriod = ["overview", "transactions", "budget", "summary"].includes(page);
-  const hasAdd = ["overview", "transactions", "summary", "social", "plans"].includes(page);
+  const hasPeriod = ["overview", "transactions", "budget", "summary", "debts"].includes(page);
+  const hasAdd = ["overview", "transactions", "social", "plans", "debts"].includes(page) || (page === "summary" && summaryMode !== "twelve");
   const showYear = page === "summary" && ["year", "twelve"].includes(summaryMode);
   const navigation = <nav className="grid gap-1.5">{NAV.map(([id, label, _, icon]) => <button key={id} type="button" onClick={() => { onNavigate(id); setMenuOpen(false); }}
       className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-emerald-600 ${page === id ? "bg-emerald-600 text-white shadow-sm shadow-emerald-800/10" : "text-[#45624c] hover:bg-[#e8f4eb] dark:text-slate-300 dark:hover:bg-slate-800"}`}>
@@ -40,7 +41,7 @@ export default function FinanceLayout({ page, onNavigate, month, onMonthChange, 
             {hasPeriod && <div className="min-w-0 flex-[1_1_230px] sm:flex-none">
               {showYear ? <YearPicker value={summaryYear} onChange={onSummaryYearChange} className="w-full sm:w-[270px]"/> : <MonthPicker value={month} onChange={onMonthChange} className="w-full sm:w-[420px]"/>}
             </div>}
-            {hasAdd && <button type="button" className={`${primary} flex-1 whitespace-nowrap sm:flex-none`} onClick={onAdd}>{page === "social" ? "+ Ghi nhận khoản" : addLabel || "+ Thêm giao dịch"}</button>}
+            {hasAdd && <button type="button" className={`${primary} flex-1 whitespace-nowrap sm:flex-none`} onClick={onAdd}>{page === "social" ? "+ Ghi nhận khoản" : page === "debts" ? "+ Ghi khoản nợ" : addLabel || "+ Thêm giao dịch"}</button>}
             <button type="button" className={`${button} !px-3`} onClick={onThemeChange} aria-label={dark ? "Bật giao diện sáng" : "Bật giao diện tối"} title={dark ? "Giao diện sáng" : "Giao diện tối"}>{dark ? "☀" : "☾"}</button>
           </div>
         </header>

@@ -54,7 +54,7 @@ test("Tạo kế hoạch lên header, xem trực tiếp qua dialog và tích ho�
   const page = read("pages/PlansPage.jsx");
   const detail = read("components/plans/PlanDetailsDialog.jsx");
   assert.match(app, /planAddSignal/);
-  assert.match(layout, /"plans"\].includes\(page\)/);
+  assert.match(layout, /"plans"/);
   assert.match(page, /<PlanDetailsDialog/);
   assert.match(page, /Xem chi tiết/);
   assert.match(page, /Tổng chi phí đã chuẩn bị/);

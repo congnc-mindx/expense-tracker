@@ -14,3 +14,19 @@ export function applyYearGoals(months, scope, month, goals, recordedSavings = nu
       ...(scope === "month" && recordedSavings !== null ? { savings: recordedSavings } : {}) };
   });
 }
+
+/** Only compare goals in months that have begun; future targets are not "missed". */
+export function goalProgressForYear(rows = []) {
+  const defined = rows.filter((row) => (row.target ?? 0) > 0 || (row.savingsTarget ?? 0) > 0).length;
+  const incomeRows = rows.filter((row) => !row.future && (row.target ?? 0) > 0);
+  const savingRows = rows.filter((row) => !row.future && (row.savingsTarget ?? 0) > 0);
+  const sum = (selected, field) => selected.reduce((total, row) => total + (row[field] || 0), 0);
+  const percentage = (actual, expected) => expected > 0 ? `${Math.round(actual / expected * 100)}%` : "Chưa đặt";
+  return {
+    defined,
+    eligible: incomeRows.length,
+    reached: incomeRows.filter((row) => row.income >= row.target).length,
+    incomeProgress: percentage(sum(incomeRows, "income"), sum(incomeRows, "target")),
+    savingsProgress: percentage(sum(savingRows, "savings"), sum(savingRows, "savingsTarget")),
+  };
+}

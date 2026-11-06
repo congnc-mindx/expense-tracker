@@ -44,8 +44,8 @@ export default function SocialHistoryDialog({ person, onClose, onAdd, onEdit, on
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
           <div className="mb-4 grid grid-cols-2 gap-3">
-            <div className="min-w-0 rounded-xl bg-rose-50 p-3 dark:bg-rose-950/20">
-              <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">Mình gửi</p>
+            <div className="min-w-0 rounded-xl bg-amber-50 p-3 dark:bg-amber-950/20">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Mình gửi</p>
               <p className="mt-1 break-words text-base font-bold tabular-nums">{formatMoney(person.given)}</p>
             </div>
             <div className="min-w-0 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/20">
@@ -61,7 +61,7 @@ export default function SocialHistoryDialog({ person, onClose, onAdd, onEdit, on
                   <div className="min-w-0 flex-[1_1_220px]">
                     <p className="text-sm font-bold">
                       {socialName(entry.occasion)}
-                      <span className={`ml-2 text-xs font-semibold ${entry.direction === "given" ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+                      <span className={`ml-2 text-xs font-semibold ${entry.direction === "given" ? "text-amber-600 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}>
                         {entry.direction === "given" ? "Mình gửi" : "Họ gửi"}
                       </span>
                     </p>
