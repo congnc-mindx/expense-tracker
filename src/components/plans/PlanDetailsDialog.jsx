@@ -2,6 +2,7 @@ import useModalDialog from "../common/useModalDialog";
 import { button, primary, muted } from "../finance/ui";
 import { formatMoney } from "../../utils/money";
 import { planCategory, planFunding, planProgress, planTasksProgress } from "../../utils/plans";
+import { planHorizon } from "../../utils/planHorizon";
 
 export default function PlanDetailsDialog({ plan, busy, onClose, onEdit, onToggleTask }) {
   const dialog = useModalDialog(onClose, busy);
@@ -12,7 +13,7 @@ export default function PlanDetailsDialog({ plan, busy, onClose, onEdit, onToggl
   return <dialog ref={dialog.ref} onCancel={dialog.onCancel} aria-labelledby="plan-details-title"
     className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-[780px] overflow-y-auto rounded-[24px] border border-[#dce9df] bg-white p-5 text-slate-900 shadow-2xl backdrop:bg-slate-950/65 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 sm:p-7">
     <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0"><p className={`text-sm font-semibold ${muted}`}>{category.icon} {category.label}</p>
+      <div className="min-w-0"><p className={`text-sm font-semibold ${muted}`}>{category.icon} {category.label} · {planHorizon(plan) === "long" ? "Dài hạn" : "Ngắn hạn"}</p>
         <h2 id="plan-details-title" className="mt-1 break-words text-xl font-extrabold sm:text-2xl">{plan.title}</h2>
         <p className={`mt-1 ${muted}`}>{plan.targetDate ? `Dự kiến: ${plan.targetDate.split("-").reverse().join("/")}` : "Chưa đặt hạn hoàn thành"}</p>
       </div>

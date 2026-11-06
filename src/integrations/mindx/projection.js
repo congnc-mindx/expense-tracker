@@ -1,4 +1,4 @@
-import { validSalaryPeriod } from "./periods.js";
+import { inMindxSyncWindow, validSalaryPeriod } from "./periods.js";
 import { localDate } from "../../utils/finance.js";
 
 /** Salary is attributed to its WORK month, regardless of the bank transfer date.
@@ -6,7 +6,7 @@ import { localDate } from "../../utils/finance.js";
  */
 export function mindxSalaryTransactions(rows = [], accountUid, existing = [], category = "mindx", today = localDate()) {
   if (!accountUid) return [];
-  return rows.filter(validSalaryPeriod)
+  return rows.filter(validSalaryPeriod).filter((row) => inMindxSyncWindow(row.period))
     .filter((row) => row.expectedIncome > 0)
     .map((row) => ({
       id: `mindx-projection-${accountUid}-${row.period}`,
@@ -23,7 +23,7 @@ export function mindxSalaryTransactions(rows = [], accountUid, existing = [], ca
  */
 export function legacyMindxReceiptsExcluded(transactions = [], salaryRows = [], accountUid) {
   if (!accountUid) return transactions;
-  const periods = new Set(salaryRows.filter(validSalaryPeriod).map((row) => row.period));
+  const periods = new Set(salaryRows.filter(validSalaryPeriod).filter((row) => inMindxSyncWindow(row.period)).map((row) => row.period));
   return transactions.filter((tx) => !(tx.mindxPeriod && periods.has(tx.mindxPeriod)
     && (tx.mindxSourceUid === accountUid || tx.id === `mindx-${accountUid}-${tx.mindxPeriod}`)));
 }

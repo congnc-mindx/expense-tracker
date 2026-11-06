@@ -39,10 +39,10 @@ test("Dữ liệu yearPlans cũ vẫn hợp lệ; tiền âm và sai tháng bị
   assert.throws(() => applyYearGoals(old, "all", 1, {target:-1,savingsTarget:0}), /Mục tiêu/);
 });
 
-test("Thiết lập mục tiêu năm được chuyển sang Cài đặt và vẫn dùng cùng dialog", () => {
-  assert.match(source("pages/SettingsPage.jsx"), /Mục tiêu năm/);
-  assert.match(source("components/settings/YearGoalsSettingsPanel.jsx"), /YearGoalsDialog/);
-  assert.match(source("components/settings/YearGoalsSettingsPanel.jsx"), /Tổng kết chỉ dùng để theo dõi/);
+test("Mục tiêu được đặt lại trong Tổng kết và vẫn lưu theo từng tháng qua Firebase", () => {
+  assert.doesNotMatch(source("pages/SettingsPage.jsx"), /Mục tiêu năm|YearGoalsSettingsPanel/);
+  assert.match(source("pages/SummaryPage.jsx"), />\s*Mục tiêu\s*</);
+  assert.match(source("pages/YearSummaryPage.jsx"), /YearGoalsDialog/);
   assert.match(source("components/finance/YearGoalsDialog.jsx"), /Cả 12 tháng/);
   assert.match(source("hooks/useYearPlan.js"), /runTransaction/);
 });

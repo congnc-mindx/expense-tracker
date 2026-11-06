@@ -50,10 +50,14 @@ test("Popup xác nhận kế thừa đúng dark mode từ Layout qua portal", ()
   assert.match(confirm, /dark:bg-slate-900/);
 });
 
-test("Kế hoạch dùng 4 thẻ gọn, lọc kỳ nhưng không đổi schema Firebase", () => {
+test("Kế hoạch dùng bộ lọc chung và thẻ số liệu nhỏ gọn", () => {
   const page = read("pages/PlansPage.jsx");
+  const filters = read("components/plans/PlanFilters.jsx");
   assert.match(page, /filterPlansByPeriod/);
-  assert.match(page, /Theo tháng/);
-  assert.match(page, /Theo năm/);
-  assert.match(page, /!p-3 sm:!p-4/);
+  assert.match(page, /<PlanFilters/);
+  assert.match(page, /<FinanceCards compact/);
+  assert.match(filters, /Theo tháng/);
+  assert.match(filters, /Theo năm/);
+  assert.match(filters, /SmartSelect label="Lọc trạng thái kế hoạch"/);
+  assert.match(filters, /SmartSelect label="Lọc loại kế hoạch"/);
 });

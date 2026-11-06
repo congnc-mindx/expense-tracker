@@ -29,7 +29,7 @@ test("Tổng hợp Excel gồm cả Sổ mừng, không cộng tiền tương la
 });
 
 test("XLSX tạo được ZIP chuẩn với Workbook, Styles, Sheet và số tiền VND", () => {
-  const bytes = buildAnnualWorkbook(fixture, 2026, [{ period: "2026-04", expectedIncome: 5500000, confirmedWork: 3000000, waitingWork: 2500000 }]);
+  const bytes = buildAnnualWorkbook(fixture, 2026, [{ period: "2026-11", expectedIncome: 5500000, confirmedWork: 3000000, waitingWork: 2500000 }]);
   assert.equal(bytes[0], 0x50); assert.equal(bytes[1], 0x4B);
   const text = new TextDecoder().decode(bytes);
   assert.match(text, /Tổng hợp 12 tháng/);

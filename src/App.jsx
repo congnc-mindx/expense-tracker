@@ -68,6 +68,7 @@ function FinanceApp({ user, onSignOut, signingOut, logoutError }) {
   const [socialAddSignal, setSocialAddSignal] = useState(0);
   const [debtAddSignal, setDebtAddSignal] = useState(0);
   const [planAddSignal, setPlanAddSignal] = useState(0);
+  const [goalAddSignal, setGoalAddSignal] = useState(0);
   const [recurringBusy,setRecurringBusy]=useState(false);
   const [recurringError,setRecurringError]=useState("");
   const mindx = useMindxIncome();
@@ -186,13 +187,13 @@ function FinanceApp({ user, onSignOut, signingOut, logoutError }) {
   }
   return <CategoryProvider config={categoryConfig}><FinanceLayout page={page} onNavigate={navigate} month={month} onMonthChange={setMonth} dark={dark} onThemeChange={toggleTheme}
     summaryMode={summaryMode} summaryYear={summaryYear} onSummaryYearChange={(y)=>setSummaryYear(clampYear(y))} availableYears={availableYears}
-    addLabel={page === "plans" ? "+ Tạo kế hoạch" : page === "transactions" && transactionType === "recurring" ? "+ Thêm định kỳ" : undefined}
-    onAdd={() => page === "plans" ? setPlanAddSignal((n) => n + 1) : page === "social" ? setSocialAddSignal((n) => n + 1) : page === "debts" ? setDebtAddSignal((n) => n + 1) : setModal({ type: page === "transactions" && transactionType !== "recurring" ? transactionType : "expense", recurring: page === "transactions" && transactionType === "recurring" })} onSignOut={onSignOut} signingOut={signingOut} logoutError={logoutError} user={user}>
+    addLabel={page === "summary" && summaryMode === "twelve" ? "+ Thiết lập mục tiêu" : page === "plans" ? "+ Tạo kế hoạch" : page === "transactions" && transactionType === "recurring" ? "+ Thêm định kỳ" : undefined}
+    onAdd={() => page === "summary" && summaryMode === "twelve" ? setGoalAddSignal((n) => n + 1) : page === "plans" ? setPlanAddSignal((n) => n + 1) : page === "social" ? setSocialAddSignal((n) => n + 1) : page === "debts" ? setDebtAddSignal((n) => n + 1) : setModal({ type: page === "transactions" && transactionType !== "recurring" ? transactionType : "expense", recurring: page === "transactions" && transactionType === "recurring" })} onSignOut={onSignOut} signingOut={signingOut} logoutError={logoutError} user={user}>
     {themeError && <p role="alert" className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">{themeError}</p>}
     {readError && <p role="alert" className="mb-5 rounded-xl bg-rose-50 p-4 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-200">{readError}</p>}
     {busy ? <div className="rounded-2xl bg-white p-8 text-center text-slate-500 dark:bg-slate-900">Đang tải dữ liệu từ Firebase…</div> :
       readError ? null : <>
-        {page === "settings" && <SettingsPage user={user} dark={dark} onThemeChange={toggleTheme} categoryConfig={categoryConfig} onSaveCategories={saveCategories} usedCategoryIds={usedCategoryIds} mindx={mindx} transactions={transactions} summaryTransactions={combinedTransactions} />}
+        {page === "settings" && <SettingsPage user={user} dark={dark} onThemeChange={toggleTheme} categoryConfig={categoryConfig} onSaveCategories={saveCategories} usedCategoryIds={usedCategoryIds} mindx={mindx} transactions={transactions} />}
         {page === "social" && <SocialLedgerPage store={socialStore} addSignal={socialAddSignal} />}
         {page === "debts" && <DebtsPage uid={user.uid} today={today} month={month} addSignal={debtAddSignal} />}
         {page === "plans" && (plansStore.loading ? <div className="rounded-2xl bg-white p-8 text-center text-slate-500 dark:bg-slate-900">Đang tải kế hoạch từ Firebase…</div> : <PlansPage store={plansStore} addSignal={planAddSignal} />)}
@@ -202,7 +203,7 @@ function FinanceApp({ user, onSignOut, signingOut, logoutError }) {
           mindx={mindx} uid={user.uid} incomeCategoryId={categoryConfig.income.find((c) => c.id === "mindx")?.id || categoryConfig.income.find((c) => !c.locked)?.id || "mindx"} transactions={transactions}
           onCreateRecurring={(type) => setModal({ type, recurring: true })} onRecurringPayment={markRecurringPaid} onEdit={(transaction) => setModal({ type: transaction.type, transaction })} onDelete={deleteTransaction} onSocialNavigate={() => navigate("social")} />}
         {page === "budget" && <BudgetPage key={month} budget={budget} sourceMonth={resolvedBudget.sourceMonth} inherited={resolvedBudget.inherited} rows={rows} onSave={saveBudget} />}
-        {page === "summary" && <SummaryPage transactions={combinedTransactions} userId={user.uid} month={month} mode={summaryMode} onModeChange={setSummaryMode} year={summaryYear} />}
+        {page === "summary" && <SummaryPage transactions={combinedTransactions} userId={user.uid} month={month} mode={summaryMode} onModeChange={setSummaryMode} year={summaryYear} goalAddSignal={goalAddSignal} />}
       </>}
     {modal && !busy && !readError && <TransactionModal defaultType={modal.type} transaction={modal.transaction}
       recurringDefault={Boolean(modal.recurring)} onSave={saveTransaction}

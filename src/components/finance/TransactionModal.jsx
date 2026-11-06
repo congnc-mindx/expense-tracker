@@ -10,33 +10,21 @@ import { input, button, primary } from "./ui";
 
 const SUGGESTED_AMOUNTS = [50, 100, 200, 500];
 
-function CategoryButton({ active, onClick, children }) {
-  return <button type="button" onClick={onClick}
-    className={`min-h-10 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${active ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-emerald-500 dark:hover:bg-slate-800"}`}>{children}</button>;
-}
-
 function ExpenseCategoryPicker({ groups, categories, value, onChange }) {
-  const availableGroups = useMemo(() => groups.map((group) => ({
-    ...group,
-    items: categories.filter((cat) => cat.groupId === group.id && !cat.locked && (!cat.hidden || cat.id === value)),
-  })).filter((group) => group.items.length), [groups, categories, value]);
-  const selectedGroupId = availableGroups.find((group) => group.items.some((item) => item.id === value))?.id || availableGroups[0]?.id || "";
-  const [openGroupId, setOpenGroupId] = useState(selectedGroupId);
-  useEffect(() => { setOpenGroupId(selectedGroupId); }, [selectedGroupId]);
-  const activeGroup = availableGroups.find((group) => group.id === openGroupId) || availableGroups[0];
+  const options = useMemo(() => groups.map((group) => ({
+    label: group.name,
+    options: categories
+      .filter((category) => category.groupId === group.id && !category.locked && (!category.hidden || category.id === value))
+      .map((category) => ({ value: category.id, label: `${category.icon || ""} ${category.name}`.trim() })),
+  })).filter((group) => group.options.length), [groups, categories, value]);
 
-  if (!availableGroups.length) return <p className="rounded-xl border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Chưa có danh mục chi khả dụng.</p>;
-  return <div className="grid gap-2.5">
-    <div className="flex flex-wrap gap-2">
-      {availableGroups.map((group) => <CategoryButton key={group.id} active={openGroupId === group.id} onClick={() => setOpenGroupId(group.id)}>{group.name}</CategoryButton>)}
-    </div>
-    {activeGroup && <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/40">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{activeGroup.name}</p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {activeGroup.items.map((cat) => <CategoryButton key={cat.id} active={value === cat.id} onClick={() => onChange(cat.id)}>{`${cat.icon || ""} ${cat.name}`.trim()}</CategoryButton>)}
-      </div>
-    </div>}
-  </div>;
+  return <SmartSelect
+    label="Danh mục"
+    value={value}
+    onChange={onChange}
+    options={options}
+    accordionGroups
+  />;
 }
 
 function IncomeCategoryPicker({ categories, value, onChange }) {
@@ -159,12 +147,12 @@ export default function TransactionModal({ transaction, defaultType, onSave, onS
             </div>
 
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-              <label className="grid min-w-0 gap-1.5 text-sm font-semibold">
-                Danh mục
+              <div className="grid min-w-0 gap-1.5 text-sm font-semibold">
+                <span>Danh mục</span>
                 {draft.type === "expense"
                   ? <ExpenseCategoryPicker groups={groups} categories={expenseCategories} value={draft.category} onChange={(v) => change("category", v)} />
                   : <IncomeCategoryPicker categories={incomeCategories} value={draft.category} onChange={(v) => change("category", v)} />}
-              </label>
+              </div>
               <label className="grid min-w-0 gap-1.5 text-sm font-semibold">
                 Ngày giao dịch
                 <DatePicker label="Ngày giao dịch" value={draft.date} onChange={(v) => change("date", v)} disabled={saving} />

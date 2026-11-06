@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged, browserLocalPersistence, setPersistence, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, onSnapshot } from "firebase/firestore";
 import { mindxAuth, mindxConfigured, mindxDb } from "./client";
-import { validSalaryPeriod } from "./periods";
+import { inMindxSyncWindow, validSalaryPeriod } from "./periods";
 
 export function useMindxIncome() {
   const [account, setAccount] = useState(undefined);
@@ -16,7 +16,7 @@ export function useMindxIncome() {
     setState({ rows: [], loading: true, error: "" });
     return onSnapshot(collection(mindxDb, "users", account.uid, "incomeExports"),
       (snapshot) => setState({
-        rows: snapshot.docs.map((d) => ({ ...d.data(), period: d.id })).filter(validSalaryPeriod).sort((a, b) => b.period.localeCompare(a.period)),
+        rows: snapshot.docs.map((d) => ({ ...d.data(), period: d.id })).filter(validSalaryPeriod).filter((row) => inMindxSyncWindow(row.period)).sort((a, b) => b.period.localeCompare(a.period)),
         loading: false, error: "",
       }),
       (reason) => setState({ rows: [], loading: false, error: reason?.code === "permission-denied" ? "Salary Tracker chưa cho phép tài khoản này đọc bảng tổng hợp lương." : "Không đọc được dữ liệu lương mindX." }),

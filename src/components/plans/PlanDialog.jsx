@@ -4,6 +4,7 @@ import DatePicker from "../common/DatePicker";
 import SmartSelect from "../common/SmartSelect";
 import { input, button, primary, muted } from "../finance/ui";
 import { PLAN_CATEGORIES, planFunding, validatePlan } from "../../utils/plans";
+import { PLAN_HORIZONS, planHorizon } from "../../utils/planHorizon";
 import { parseThousandsToVnd, formatVndAsThousands, sanitizeThousandsInput } from "../../utils/moneyInput";
 import { formatMoney } from "../../utils/money";
 
@@ -20,6 +21,7 @@ export default function PlanDialog({ plan, onSave, onClose }) {
   const [draft, setDraft] = useState(() => ({
     title: plan?.title || "",
     category: plan?.category || "shopping",
+    horizon: plan ? planHorizon(plan) : "short",
     targetDate: plan?.targetDate || "",
     note: plan?.note || "",
     tasks: (plan?.tasks || []).map(rowFrom),
@@ -85,6 +87,21 @@ export default function PlanDialog({ plan, onSave, onClose }) {
               {draft.targetDate && <button type="button" className={`${button} !px-3`} onClick={() => change("targetDate", "")} aria-label="Bỏ ngày dự kiến">×</button>}
             </div>
           </label>
+        </div>
+        <div className="rounded-xl border border-[#e1ebe4] bg-[#f7fbf8] p-3 dark:border-slate-700 dark:bg-slate-800/40">
+          <p className="mb-2 text-sm font-bold">Loại kế hoạch</p>
+          <div role="group" aria-label="Chọn loại kế hoạch" className="grid grid-cols-2 gap-2">
+            {PLAN_HORIZONS.map(({value,label}) => (
+              <button key={value} type="button" aria-pressed={draft.horizon === value}
+                className={`min-h-10 rounded-xl border px-3 py-2 text-sm font-bold transition-colors ${draft.horizon === value
+                  ? "border-emerald-600 bg-emerald-600 text-white"
+                  : "border-slate-300 bg-white text-slate-700 hover:border-emerald-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"}`}
+                onClick={() => change("horizon", value)}>{label}</button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Ngắn hạn thường theo tháng; dài hạn phù hợp mục tiêu lớn hoặc kéo dài nhiều năm. Có thể đổi khi chỉnh sửa.
+          </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-semibold">Số tiền mục tiêu <span className="text-xs font-normal text-slate-500">(nghìn đồng)</span>

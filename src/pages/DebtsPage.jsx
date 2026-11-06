@@ -119,24 +119,25 @@ export default function DebtsPage({ uid, today, month, addSignal = 0 }) {
         <span>Phát sinh nợ tôi: <strong className="text-emerald-700 dark:text-emerald-400">{formatMoney(inMonth.createdReceivable)}</strong></span>
         <span>Đã trả / đã thu: <strong>{formatMoney(inMonth.paidInMonth + inMonth.collectedInMonth)}</strong></span>
       </div>
-      <div role="group" aria-label="Chiều khoản nợ" className="grid grid-cols-3 gap-2">
-        {[
-          { value: "all", label: "Tất cả" },
-          { value: "payable", label: "Tôi đang nợ" },
-          { value: "receivable", label: "Nợ tôi" },
-        ].map((option) => <button key={option.value} type="button" aria-pressed={direction === option.value} onClick={() => setDirection(option.value)}
-          className={`min-h-11 rounded-xl px-2 py-2 text-xs font-bold transition-colors sm:px-3 sm:text-sm ${direction === option.value ? "bg-emerald-600 text-white" : "border border-slate-200 text-slate-600 hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"}`}>{option.label}</button>)}
-      </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_190px]">
+      <div className="mt-2 grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_190px_190px]">
         <label className="grid min-w-0 gap-1.5 text-sm font-semibold">Tìm theo người hoặc ghi chú
           <input type="search" className={input} placeholder="Tìm khoản nợ…" value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
-        <label className="grid min-w-0 gap-1.5 text-sm font-semibold">Trạng thái
+        <div className="grid min-w-0 gap-1.5 text-sm font-semibold">
+          <span>Chiều khoản nợ</span>
+          <SmartSelect label="Lọc chiều khoản nợ" value={direction} onChange={setDirection} options={[
+            { value: "all", label: "Tất cả" },
+            { value: "payable", label: "Tôi đang nợ" },
+            { value: "receivable", label: "Người khác nợ tôi" },
+          ]}/>
+        </div>
+        <div className="grid min-w-0 gap-1.5 text-sm font-semibold">
+          <span>Trạng thái</span>
           <SmartSelect label="Lọc trạng thái nợ" value={status} onChange={setStatus} options={[
             { value: "active", label: "Chưa tất toán" }, { value: "overdue", label: "Đã quá hạn" },
             { value: "paid", label: "Đã tất toán" }, { value: "all", label: "Tất cả trạng thái" },
           ]}/>
-        </label>
+        </div>
       </div>
       <p className={`mt-3 text-xs ${muted}`}>{filtered.length} khoản phù hợp · Nhấn vào thẻ để xem lịch sử trả nợ, sửa hoặc xóa.</p>
     </section>

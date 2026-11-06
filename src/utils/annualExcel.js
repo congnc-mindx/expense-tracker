@@ -1,6 +1,8 @@
+import { planHorizon } from "./planHorizon.js";
 import { isActual } from "./finance.js";
 import { debtBalanceAt, debtPayments } from "./debts.js";
 import { mindxSalaryTransactions, legacyMindxReceiptsExcluded } from "../integrations/mindx/projection.js";
+import { inMindxSyncWindow } from "../integrations/mindx/periods.js";
 import { automaticRecurringExpenses } from "./automaticLedger.js";
 import { socialToTransaction } from "./socialAccounting.js";
 import { resolveMonthlyBudget } from "./budgetInheritance.js";
@@ -64,18 +66,18 @@ export function buildAnnualSheets(snapshot, year, salaryRows = [], salaryUid = "
     if (!entries.length) budgetRows.push([key, resolved?.sourceMonth || "", moneyCell(budget.total), "", moneyCell(0)]);
     else for (const [categoryId, value] of entries) budgetRows.push([key, resolved?.sourceMonth || "", moneyCell(budget.total), categoryById(config, categoryId).name, moneyCell(value)]);
   }
-  const planRows = [["ID", "Kế hoạch", "Nhóm", "Dự kiến hoàn thành", "Mục tiêu (VND)", "Đã chuẩn bị chung (VND)", "Trạng thái", "Ghi chú"]];
+  const planRows = [["ID", "Kế hoạch", "Nhóm", "Loại kế hoạch", "Dự kiến hoàn thành", "Mục tiêu (VND)", "Đã chuẩn bị chung (VND)", "Trạng thái", "Ghi chú"]];
   const taskRows = [["Kế hoạch", "Việc cần làm", "Dự chi (VND)", "Đã chuẩn bị (VND)", "Hoàn thành"]];
   for (const plan of plans) {
     if (plan.targetDate && !String(plan.targetDate).startsWith(`${year}-`)) continue;
-    planRows.push([plan.id, plan.title, plan.category, info(plan.targetDate), moneyCell(plan.targetAmount), moneyCell(plan.preparedAmount), plan.status, info(plan.note)]);
+    planRows.push([plan.id, plan.title, plan.category, planHorizon(plan) === "long" ? "Dài hạn" : "Ngắn hạn", info(plan.targetDate), moneyCell(plan.targetAmount), moneyCell(plan.savedAmount ?? 0), plan.status, info(plan.note)]);
     for (const task of plan.tasks || []) taskRows.push([plan.title, task.title, moneyCell(task.estimatedAmount), moneyCell(task.preparedAmount), task.done ? "Có" : "Không"]);
   }
   const yearPlan = yearPlans.find((row) => String(row.id) === String(year));
   const yearGoalRows = [["Tháng", "Mục tiêu thu (VND)", "Mục tiêu tiết kiệm (VND)", "Đã tiết kiệm (VND)"],
     ...Array.from({ length: 12 }, (_, i) => [monthKey(year, i + 1), moneyCell(yearPlan?.months?.[i]?.target || 0), moneyCell(yearPlan?.months?.[i]?.savingsTarget || 0), moneyCell(yearPlan?.months?.[i]?.savings || 0)])];
   const salary = [["Kỳ mindX", "Dự kiến (VND)", "Công việc xác nhận (VND)", "Đang chờ (VND)", "Sửa lúc"],
-    ...salaryRows.filter((row) => row.period?.startsWith(`${year}-`)).map((row) => [row.period, moneyCell(row.expectedIncome), moneyCell(row.confirmedWork), moneyCell(row.waitingWork), row.updatedAt ? new Date(row.updatedAt).toISOString() : ""])];
+    ...salaryRows.filter((row) => row.period?.startsWith(`${year}-`) && inMindxSyncWindow(row.period)).map((row) => [row.period, moneyCell(row.expectedIncome), moneyCell(row.confirmedWork), moneyCell(row.waitingWork), row.updatedAt ? new Date(row.updatedAt).toISOString() : ""])];
   const recurring = [["ID", "Loại", "Tên", "Danh mục", "Số tiền (VND)", "Ngày trong tháng", "Đang hoạt động"],
     ...(preferences.find((row) => row.id === "recurringExpenses")?.items || []).map((row) => [row.id, row.type === "income" ? "Thu" : "Chi", row.title,
       categoryById(config, row.category).name, moneyCell(row.amount), row.dayOfMonth ?? row.day ?? "", row.active === false ? "Không" : "Có"])];

@@ -9,7 +9,7 @@ import { validateBackup } from "../src/utils/backupValidation.js";
 import { buildAnnualSheets } from "../src/utils/annualExcel.js";
 
 const recurring = { id: "rent", title: "Tiền nhà", type: "expense", amount: 2_000_000, category: "food", day: 30, startMonth: "2026-10", endMonth: "", active: true };
-const salary = (amount) => ({ period: "2026-10", expectedIncome: amount, confirmedWork: 0, waitingWork: 0 });
+const salary = (amount, period = "2026-11") => ({ period, expectedIncome: amount, confirmedWork: 0, waitingWork: 0 });
 const snapshot = {
   app: "zWhisFlow", version: 2, exportedAt: "2026-11-01T12:00:00.000Z",
   collections: { transactions: [], budgets: [], plans: [], socialEntries: [], yearPlans: [], preferences: [
@@ -46,13 +46,14 @@ test("Lịch định kỳ giữ kỳ cũ sau khi chỉnh hoặc dừng ở kỳ 
 
 test("Lương mindX lấy đúng tháng công việc, realtime thay đổi không nhân đôi; hóa đơn cũ tránh đếm trùng", () => {
   const rows = mindxSalaryTransactions([salary(12_160_000)], "uid", [], "mindx", "2026-11-01");
-  assert.equal(rows[0].date, "2026-10-01");
+  assert.equal(rows[0].date, "2026-11-01");
   assert.equal(rows[0].amount, 12_160_000);
   assert.equal(rows[0].status, "actual");
   assert.equal(mindxSalaryTransactions([salary(15_000_000)], "uid", [], "mindx", "2026-11-01")[0].amount, 15_000_000);
-  const receipt = { id: "mindx-uid-2026-10", type: "income", mindxPeriod: "2026-10", mindxSourceUid: "uid", amount: 12_000_000, date: "2026-11-20" };
+  const receipt = { id: "mindx-uid-2026-11", type: "income", mindxPeriod: "2026-11", mindxSourceUid: "uid", amount: 12_000_000, date: "2026-12-20" };
   assert.equal(legacyMindxReceiptsExcluded([receipt], [salary(15_000_000)], "uid").length, 0);
   assert.equal(legacyMindxReceiptsExcluded([receipt], [], "uid").length, 1);
+  assert.equal(mindxSalaryTransactions([salary(12_160_000, "2026-10")], "uid", [], "mindx", "2026-11-01").length, 0);
 });
 
 test("Bản JSON hợp lệ được kiểm tra 6 collection, ID trùng hoặc kiểu sai bị chặn", () => {
@@ -69,11 +70,12 @@ test("Xuất Excel thống nhất với thu nhập mindX và chi định kỳ t�
   const yearly = sheets.find((sheet) => sheet.name === "Tổng hợp 12 tháng").rows;
   const october = yearly[3 + 9];
   const november = yearly[3 + 10];
-  assert.equal(october[1].value, 12_160_000);
+  assert.equal(october[1].value, 0);
+  assert.equal(november[1].value, 12_160_000);
   assert.equal(october[2].value, 2_000_000);
   assert.equal(november[2].value, 2_000_000);
   const movements = sheets.find((sheet) => sheet.name === "Giao dịch").rows;
-  assert.ok(movements.some((row) => row[0] === "mindx-projection-uid-2026-10"));
+  assert.ok(movements.some((row) => row[0] === "mindx-projection-uid-2026-11"));
   assert.ok(movements.some((row) => row[0] === "recurring_rent_2026-10"));
 });
 

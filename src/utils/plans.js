@@ -1,4 +1,5 @@
 import { validDate, localDate, normalize } from "./finance.js";
+import { planHorizon } from "./planHorizon.js";
 
 export const PLAN_CATEGORIES = [
   { value: "home", label: "Nhà cửa", icon: "⌂" },
@@ -53,7 +54,9 @@ export function validatePlan(input) {
   if (!Number.isSafeInteger(planFunding({ savedAmount, tasks: cleanTasks }).prepared))
     throw new Error("Tổng tiền đã chuẩn bị vượt giới hạn cho phép.");
   const status = input?.status === "completed" ? "completed" : "active";
-  return { title, category: input.category, targetAmount, savedAmount, targetDate, note, tasks: cleanTasks, status };
+  const horizon = input?.horizon == null || input.horizon === "" ? planHorizon(input) : input.horizon;
+  if (!["short", "long"].includes(horizon)) throw new Error("Loại kế hoạch không hợp lệ.");
+  return { title, category: input.category, horizon, targetAmount, savedAmount, targetDate, note, tasks: cleanTasks, status };
 }
 
 export function planProgress(plan) {

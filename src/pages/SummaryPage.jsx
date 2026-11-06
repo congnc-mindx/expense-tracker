@@ -15,7 +15,8 @@ export default function SummaryPage({
   month,
   mode,
   onModeChange,
-  year
+  year,
+  goalAddSignal = 0,
 }) {
   const { getCategoryById } = useCategories();
   const rows = monthRows(transactions, month).filter((tx) => isActual(tx));
@@ -56,7 +57,7 @@ export default function SummaryPage({
           className={mode === "twelve" ? primary : button}
           onClick={() => onModeChange("twelve")}
         >
-          12 tháng
+          Mục tiêu
         </button>
       </div>
       {["year", "twelve"].includes(mode) ? (
@@ -65,6 +66,7 @@ export default function SummaryPage({
           userId={userId}
           year={year}
           view={mode === "twelve" ? "table" : "analytics"}
+          goalAddSignal={goalAddSignal}
         />
       ) : (
         <>

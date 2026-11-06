@@ -5,20 +5,25 @@ import { goalProgressForYear } from "../src/utils/yearGoals.js";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Tổng kết 12 tháng không hiển thị nút thêm giao dịch và đặt mục tiêu chuyển về Cài đặt", () => {
+test("Tổng kết Mục tiêu dùng popup mục tiêu, không hiện nút thêm giao dịch", () => {
   const layout = read("src/components/finance/FinanceLayout.jsx");
   const app = read("src/App.jsx");
-  assert.match(layout, /summaryMode !== "twelve"/);
-  assert.doesNotMatch(app, /summaryGoalSignal/);
-  assert.match(read("src/pages/SettingsPage.jsx"), /yearGoals/);
+  assert.match(layout, /"debts", "summary"/);
+  assert.match(app, /summaryMode === "twelve" \? "\+ Thiết lập mục tiêu"/);
+  assert.match(app, /setGoalAddSignal/);
+  assert.doesNotMatch(read("src/pages/SettingsPage.jsx"), /yearGoals/);
+  assert.match(read("src/pages/YearSummaryPage.jsx"), /YearGoalsDialog/);
   assert.match(read("src/pages/YearSummaryPage.jsx"), /goalProgressForYear/);
 });
 
-test("Mục tiêu năm nhận sổ mừng + lương mindX + định kỳ như Tổng kết", () => {
+test("Mục tiêu và phân tích năm dùng cùng nguồn tổng hợp, không nhân bản sang Cài đặt", () => {
   const app = read("src/App.jsx");
-  const settings = read("src/pages/SettingsPage.jsx");
-  assert.match(app, /summaryTransactions=\{combinedTransactions\}/);
-  assert.match(settings, /transactions=\{summaryTransactions\}/);
+  const summary = read("src/pages/SummaryPage.jsx");
+  const year = read("src/pages/YearSummaryPage.jsx");
+  assert.match(app, /<SummaryPage transactions=\{combinedTransactions\}/);
+  assert.match(summary, /transactions=\{transactions\.filter/);
+  assert.match(year, /buildYearSummary\(transactions, year, plan\)/);
+  assert.doesNotMatch(read("src/pages/SettingsPage.jsx"), /summaryTransactions/);
 });
 
 test("Phân tích 12 tháng chỉ tính mục tiêu đã đến kỳ, không trừ tương lai", () => {
