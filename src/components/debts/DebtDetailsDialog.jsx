@@ -1,3 +1,4 @@
+import MoneyEquivalent from "../common/MoneyEquivalent";
 import { useState } from "react";
 import useModalDialog from "../common/useModalDialog";
 import DatePicker from "../common/DatePicker";
@@ -86,7 +87,7 @@ export default function DebtDetailsDialog({ debt, onClose, onEdit, onDelete, onP
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-semibold">Số tiền <span className="text-xs font-normal text-slate-500">(nghìn đồng)</span>
               <input className={input} inputMode="decimal" placeholder="0" disabled={busy} value={amountText} onChange={(event) => setAmountText(sanitizeThousandsInput(event.target.value))} />
-              <span className="text-xs font-normal text-emerald-700 dark:text-emerald-400">{Number.isSafeInteger(parsed) ? formatMoney(parsed) : "Nhập số tiền đã thanh toán"}</span>
+              <MoneyEquivalent value={amountText} allowZero={false} />
             </label>
             <div className="grid gap-1.5 text-sm font-semibold"><span>Ngày thanh toán</span><DatePicker label="Ngày thanh toán" value={date} onChange={setDate} disabled={busy} /></div>
           </div>

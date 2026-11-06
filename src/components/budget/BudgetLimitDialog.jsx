@@ -1,8 +1,8 @@
+import MoneyEquivalent from "../common/MoneyEquivalent";
 import { useState } from "react";
 import SmartSelect from "../common/SmartSelect";
 import useModalDialog from "../common/useModalDialog";
 import { input, button, primary } from "../finance/ui";
-import { formatMoney } from "../../utils/money";
 import { formatVndAsThousands, parseThousandsToVnd, sanitizeThousandsInput } from "../../utils/moneyInput";
 
 export default function BudgetLimitDialog({ mode, categories, budget, categoryId: initialId, onSave, onClose }) {
@@ -46,8 +46,9 @@ export default function BudgetLimitDialog({ mode, categories, budget, categoryId
         <label className="grid gap-2 text-sm font-semibold">Hạn mức (nghìn đồng)
           <input autoFocus inputMode="decimal" value={amountText} onChange={(e) => { setAmountText(sanitizeThousandsInput(e.target.value)); setError(""); }}
             placeholder="0" className={`${input} !text-lg font-semibold tabular-nums`} />
+          <MoneyEquivalent value={amountText} />
         </label>
-        <p aria-live="polite" className="text-sm text-slate-500 dark:text-slate-400">{valid ? `Tương đương ${formatMoney(amount)}` : "Số tiền không hợp lệ."} Nhập 0 để xóa hạn mức.</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">Nhập 0 để xóa hạn mức.</p>
       </fieldset>
       {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-300">{error}</p>}
       <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">

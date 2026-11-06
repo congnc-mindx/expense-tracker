@@ -1,3 +1,4 @@
+import MoneyEquivalent from "../common/MoneyEquivalent";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useModalDialog from "../common/useModalDialog";
 import SmartSelect from "../common/SmartSelect";
@@ -137,6 +138,7 @@ export default function TransactionModal({ transaction, defaultType, onSave, onS
                 placeholder="0"
                 className={`${input} !min-h-12 !py-2 !text-base font-medium tabular-nums placeholder:font-normal placeholder:text-slate-400`}
               />
+              <MoneyEquivalent value={amountText} allowZero={false} />
             </label>
             <div className="flex flex-wrap gap-1.5" aria-label="Số tiền gợi ý">
               {SUGGESTED_AMOUNTS.map((thousands) => <button type="button" key={thousands}

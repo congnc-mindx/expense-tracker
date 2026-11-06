@@ -1,3 +1,4 @@
+import MoneyEquivalent from "../common/MoneyEquivalent";
 import { useState } from "react";
 import SmartSelect from "../common/SmartSelect";
 import useModalDialog from "../common/useModalDialog";
@@ -31,7 +32,7 @@ export default function RecurringRuleDialog({ rule, month, onSave, onClose }) {
       <fieldset disabled={busy} className="grid gap-3">
         <label className="grid gap-1.5 text-sm font-semibold">Tên khoản định kỳ<input autoFocus required maxLength={100} className={input} placeholder="VD: YouTube Premium, tiền lương" value={draft.title} onChange={e => change("title", e.target.value)}/></label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1.5 text-sm font-semibold">Số tiền (nghìn đồng)<input required inputMode="decimal" className={input} placeholder="0" value={amountText} onChange={e => setAmountText(sanitizeThousandsInput(e.target.value))}/></label>
+          <label className="grid gap-1.5 text-sm font-semibold"><span>Số tiền <span className="font-normal text-slate-500">(nghìn đồng)</span></span><input required inputMode="decimal" className={input} placeholder="0" value={amountText} onChange={e => setAmountText(sanitizeThousandsInput(e.target.value))}/><MoneyEquivalent value={amountText} allowZero={false}/></label>
           <label className="grid gap-1.5 text-sm font-semibold">Ngày trong tháng<input type="number" min="1" max="31" required className={input} value={draft.day} onChange={e => change("day", Number(e.target.value))}/></label>
         </div>
         <label className="grid gap-1.5 text-sm font-semibold">Danh mục<SmartSelect label="Danh mục khoản định kỳ" value={draft.category} onChange={v => change("category", v)} options={categories[type].filter(c => !c.locked && (!c.hidden || c.id === draft.category)).map(c => ({ value: c.id, label: `${c.icon || ""} ${c.name}` }))}/></label>

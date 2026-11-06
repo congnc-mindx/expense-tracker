@@ -1,9 +1,9 @@
+import MoneyEquivalent from "../common/MoneyEquivalent";
 import { useState } from "react";
 import useModalDialog from "../common/useModalDialog";
 import DatePicker from "../common/DatePicker";
 import { button, input, muted, primary } from "../finance/ui";
-import { formatMoney } from "../../utils/money";
-import { formatVndAsThousands, parseThousandsToVnd, sanitizeThousandsInput } from "../../utils/moneyInput";
+import { formatVndAsThousands, sanitizeThousandsInput } from "../../utils/moneyInput";
 import { localDate } from "../../utils/finance";
 import { validateDebt } from "../../utils/debts";
 
@@ -17,7 +17,6 @@ export default function DebtFormDialog({ debt, initialDirection = "payable", onS
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const modal = useModalDialog(onClose, saving);
-  const parsed = parseThousandsToVnd(amount);
   const hasPayments = Boolean(debt?.payments?.length);
 
   async function submit(event) {
@@ -66,7 +65,7 @@ export default function DebtFormDialog({ debt, initialDirection = "payable", onS
         <label className="grid gap-1.5 text-sm font-semibold">
           <span className="flex flex-wrap items-baseline gap-x-1.5">Số tiền gốc <span className="text-xs font-normal text-slate-500">(nghìn đồng)</span></span>
           <input className={input} inputMode="decimal" placeholder="0" required value={amount} onChange={(event) => setAmount(sanitizeThousandsInput(event.target.value))} />
-          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{Number.isSafeInteger(parsed) ? formatMoney(parsed) : "Nhập số tiền nợ"}</span>
+          <MoneyEquivalent value={amount} allowZero={false} />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="grid gap-1.5 text-sm font-semibold"><span>Ngày phát sinh</span>

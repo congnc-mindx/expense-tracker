@@ -1,11 +1,12 @@
+import MoneyEquivalent from "../common/MoneyEquivalent";
 import { useState } from "react";
 import SmartSelect from "../common/SmartSelect";
 import DatePicker from "../common/DatePicker";
 import SuggestInput from "../common/SuggestInput";
 import useModalDialog from "../common/useModalDialog";
 import { localDate } from "../../utils/finance";
-import { formatMoney } from "../../utils/money";
 import { parseSocialThousands, toSocialThousands } from "../../utils/socialMoney";
+import { sanitizeThousandsInput } from "../../utils/moneyInput";
 import { OCCASIONS, DIRECTIONS, validateSocialEntry } from "../../utils/social";
 import { button, primary, input } from "../finance/ui";
 
@@ -58,8 +59,8 @@ export default function SocialEntryModal({ entry, seed, groups, people, onSave, 
           </label>
         </div>
         <label className="grid gap-2 text-sm font-semibold">Số tiền (nghìn đồng)
-          <input className={`${input} py-3 text-2xl font-bold tabular-nums`} inputMode="decimal" required value={amountText} onChange={(e) => { setAmountText(e.target.value.replace(/[^\d.,]/g,"")); setError(""); }} placeholder="VD: 2000" />
-          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300" aria-live="polite">{Number.isSafeInteger(amount) ? `Số tiền ghi nhận: ${formatMoney(amount)}` : "Nhập 2000 để ghi nhận 2.000.000 đ"}</span>
+          <input className={`${input} py-3 text-2xl font-bold tabular-nums`} inputMode="decimal" required value={amountText} onChange={(e) => { setAmountText(sanitizeThousandsInput(e.target.value)); setError(""); }} placeholder="0" />
+          <MoneyEquivalent value={amountText} allowZero={false} />
         </label>
         <label className="grid gap-2 text-sm font-semibold">Ghi chú (tùy chọn)
           <textarea className={input} rows={2} maxLength={500} value={draft.note} onChange={(e)=>change("note",e.target.value)} placeholder="Địa điểm, dịp cụ thể, tên vợ/chồng…" />

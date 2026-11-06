@@ -1,3 +1,4 @@
+import MoneyEquivalent from "../common/MoneyEquivalent";
 import { useEffect, useState } from "react";
 import useModalDialog from "../common/useModalDialog";
 import SmartSelect from "../common/SmartSelect";
@@ -70,13 +71,13 @@ export default function YearGoalsDialog({ year, rows, initialMonth, onSave, onCl
           </label>}
           {scope === "all" && <p className="rounded-xl bg-amber-50 p-3 text-xs font-medium leading-5 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Cập nhật mục tiêu cho toàn bộ 12 tháng năm {year}; số tiền tiết kiệm đã ghi nhận ở từng tháng được giữ nguyên.</p>}
           <label className="block space-y-2 text-sm font-semibold">Mục tiêu thu nhập <span className="font-normal text-slate-500">(nghìn đồng)</span>
-            <input className={input} type="text" inputMode="decimal" value={income} onChange={(e) => setIncome(sanitizeThousandsInput(e.target.value))} placeholder="0" />
+            <input className={input} type="text" inputMode="decimal" value={income} onChange={(e) => setIncome(sanitizeThousandsInput(e.target.value))} placeholder="0" /><MoneyEquivalent value={income}/>
           </label>
           <label className="block space-y-2 text-sm font-semibold">Mục tiêu tiết kiệm <span className="font-normal text-slate-500">(nghìn đồng)</span>
-            <input className={input} type="text" inputMode="decimal" value={savingsTarget} onChange={(e) => setSavingsTarget(sanitizeThousandsInput(e.target.value))} placeholder="0" />
+            <input className={input} type="text" inputMode="decimal" value={savingsTarget} onChange={(e) => setSavingsTarget(sanitizeThousandsInput(e.target.value))} placeholder="0" /><MoneyEquivalent value={savingsTarget}/>
           </label>
           {scope === "month" && <label className="block space-y-2 text-sm font-semibold">Đã tiết kiệm thực tế <span className="font-normal text-slate-500">(nghìn đồng)</span>
-            <input className={input} type="text" inputMode="decimal" value={saved} onChange={(e) => setSaved(sanitizeThousandsInput(e.target.value))} placeholder="0" />
+            <input className={input} type="text" inputMode="decimal" value={saved} onChange={(e) => setSaved(sanitizeThousandsInput(e.target.value))} placeholder="0" /><MoneyEquivalent value={saved}/>
           </label>}
           {error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
         </div>

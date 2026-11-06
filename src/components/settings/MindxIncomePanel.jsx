@@ -1,7 +1,9 @@
+import MoneyEquivalent from "../common/MoneyEquivalent";
 import { useEffect, useState } from "react";
 import { button, input, muted, panel, primary } from "../finance/ui";
 import { formatMoney } from "../../utils/money";
 import { localDate } from "../../utils/finance";
+import { parseThousandsToVnd, sanitizeThousandsInput, formatVndAsThousands } from "../../utils/moneyInput";
 import { mindxIncomeRow, mindxPaymentId } from "../../integrations/mindx/periods";
 import { recordSalaryPayment } from "../../integrations/mindx/recordSalaryPayment";
 
@@ -16,7 +18,7 @@ export default function MindxIncomePanel({ mindx, uid, period, transactions, cat
   const row = mindxIncomeRow(mindx.rows, period);
   const paymentId = mindx.account?.uid ? mindxPaymentId(mindx.account.uid, period) : null;
   const paid = transactions.find((item) => item.id === paymentId);
-  useEffect(() => { setAmountText(row?.expectedIncome ? String(row.expectedIncome / 1000) : ""); setError(""); setNotice(""); }, [period, row?.expectedIncome]);
+  useEffect(() => { setAmountText(row?.expectedIncome ? formatVndAsThousands(row.expectedIncome) : ""); setError(""); setNotice(""); }, [period, row?.expectedIncome]);
   async function act(fn) {
     setWorking(true); setError(""); setNotice("");
     try { await fn(); }
@@ -44,12 +46,12 @@ export default function MindxIncomePanel({ mindx, uid, period, transactions, cat
             </div>
             <p className={`text-xs ${muted}`}>“Công việc xác nhận” không có nghĩa đã nhận lương. Chỉ “Ghi đã nhận” mới cộng vào thực thu.</p>
             {paid ? <p className="rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">✓ Đã ghi nhận {formatMoney(paid.amount)} ngày {paid.date?.split("-").reverse().join("/")}. Muốn thay đổi, hãy sửa ở danh sách Khoản thu.</p> : row.expectedIncome > 0 ? <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end" onSubmit={(event) => { event.preventDefault(); act(async () => {
-              const value = Number(amountText);
-              if (!Number.isFinite(value) || !Number.isSafeInteger(Math.round(value * 1000)) || Math.abs(Math.round(value * 1000) - value * 1000) > 0.0001 || value <= 0) throw new Error("Nhập số tiền hợp lệ theo nghìn đồng.");
-              await recordSalaryPayment({ uid, salaryUid: mindx.account.uid, period, row, amount: Math.round(value * 1000), date, categoryId, existing: transactions });
+              const value = parseThousandsToVnd(amountText);
+              if (!Number.isSafeInteger(value) || value <= 0) throw new Error("Nhập số tiền hợp lệ theo nghìn đồng.");
+              await recordSalaryPayment({ uid, salaryUid: mindx.account.uid, period, row, amount: value, date, categoryId, existing: transactions });
               setNotice("Đã ghi nhận thực thu cho kỳ lương này.");
             }); }}>
-              <label className="grid gap-1 text-xs font-semibold">Số đã nhận (nghìn đồng)<input className={input} type="number" min="0.001" step="any" value={amountText} onChange={(e) => setAmountText(e.target.value)} required /></label>
+              <label className="grid gap-1 text-xs font-semibold">Số đã nhận (nghìn đồng)<input className={input} type="text" inputMode="decimal" placeholder="0" value={amountText} onChange={(e) => setAmountText(sanitizeThousandsInput(e.target.value))} required /><MoneyEquivalent value={amountText} allowZero={false} /></label>
               <label className="grid gap-1 text-xs font-semibold">Ngày nhận tiền<input type="date" className={input} required value={date} max={localDate()} onChange={(e) => setDate(e.target.value)} /></label>
               <button className={primary} disabled={working}>Ghi đã nhận</button>
             </form> : <p className={muted}>Chưa có khoản lương dự kiến trong kỳ này.</p>}
